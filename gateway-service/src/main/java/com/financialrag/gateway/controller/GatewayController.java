@@ -38,4 +38,10 @@ public class GatewayController {
         SearchResponseDto response = ragService.searchDocuments(requestDto);
         return ResponseEntity.ok(response);
     }
+
+    @PostMapping("/api/v1/generate")
+    public ResponseEntity<GenerateAnswerResponseDto> generateAnswer(@Valid @RequestBody GenerateAnswerRequestDto requestDto) {
+        GenerateAnswerResponseDto response = ragService.generateAnswer(requestDto);
+        return ResponseEntity.ok(response);
+    }
 }

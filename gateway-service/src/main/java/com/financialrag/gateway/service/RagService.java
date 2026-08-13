@@ -41,6 +41,16 @@ public class RagService {
         return response.getBody();
     }
 
+    public GenerateAnswerResponseDto generateAnswer(GenerateAnswerRequestDto requestDto) {
+        String url = pythonServiceUrl + "/api/v1/generate";
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<GenerateAnswerRequestDto> entity = new HttpEntity<>(requestDto, headers);
+        ResponseEntity<GenerateAnswerResponseDto> response = restTemplate.postForEntity(url, entity, GenerateAnswerResponseDto.class);
+        return response.getBody();
+    }
+
     public String checkPythonHealth() {
         try {
             String url = pythonServiceUrl + "/health";

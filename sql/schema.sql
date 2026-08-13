@@ -1,11 +1,12 @@
 -- Enable pgvector extension
 CREATE EXTENSION IF NOT EXISTS vector;
 
--- Document Registry Table
+-- Document Registry Table with local file storage path
 CREATE TABLE IF NOT EXISTS document_registry (
     doc_id VARCHAR(255) PRIMARY KEY,
     ticker_symbol VARCHAR(50) NOT NULL,
     filename VARCHAR(255) NOT NULL,
+    file_path TEXT NOT NULL DEFAULT '',
     content_hash VARCHAR(64) NOT NULL,
     version INT DEFAULT 1 NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,

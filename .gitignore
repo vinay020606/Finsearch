@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+
+# Java / Maven
+gateway-service/target/
+*.class
+
+# Environment variables & IDE
+.env
+.idea/
+.vscode/
+*.swp

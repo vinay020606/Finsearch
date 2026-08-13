@@ -1,86 +1,89 @@
-# Production-Grade Financial Document Search & Indexing Engine
+# FinSearch: Production-Grade Financial Document Search & Indexing Engine
 
-An asynchronous, production-ready financial document search engine and indexing pipeline built with **Python**, **FastAPI**, **PostgreSQL (pgvector)**, and **Redis Queue (RQ)**.
+An enterprise microservices-based financial document search engine featuring a **Spring Boot API Gateway (Java 17)**, **Python AI RAG Engine**, **PostgreSQL (pgvector)**, **Table-Aware Text Chunking**, **Hybrid RRF Search**, and **Cross-Encoder Reranking**.
 
 ---
 
 ## ARCHITECTURE OVERVIEW
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                             CLIENT APPLICATIONS                             │
-└──────────────────────┬───────────────────────────────┬──────────────────────┘
-                       │ Upload Document               │ Search Query
-                       ▼                               ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           FASTAPI API GATEWAY                               │
-│   • Validates incoming payloads (RBAC, file structures, query parameters)   │
-│   • L1 Query Cache: Checks Redis before touching the database               │
-└──────────────────────┬───────────────────────────────┬──────────────────────┘
-                       │ Enqueue Job                   │ Cache Miss -> Read Alias
-                       ▼                               ▼
-┌────────────────────────────────┐         ┌──────────────────────────────────┐
-│    REDIS QUEUE (BG WORKER)     │         │       POSTGRESQL + PGVECTOR      │
-│  1. Content Hash Verification  │         │                                  │
-│  2. Table-Aware Text Parsing   │         │  ┌────────────────────────────┐  │
-│  3. Vector Embedding Generation│         │  │     index_aliases          │  │
-│  4. Staging Table Ingestion    │         │  │   'rag_index_live' ────────┼─┐│
-│  5. Blue-Green Alias Swap      │         │  └────────────────────────────┘ ││
-└────────────────────────────────┘         │                                 ││
-                                           │  ┌──────────────┐ ┌───────────┐ ││
-                                           │  │ rag_index_a  │ │rag_index_b│ ││
-                                           │  │ (Active)     │ │(Staging)  │ ││
-                                           │  └──────┬───────┘ └───────────┘ ││
-                                           │         │                       ││
-                                           │         └──◄────────────────────┘│
-                                           │  (Hybrid Vector + FTS RRF Search)│
-                                           └──────────────────────────────────┘
+[User / Browser]
+       │
+       │ HTTP Requests (Port 8080)
+       ▼
+┌────────────────────────────────────────────────────────┐
+│ SPRING BOOT API GATEWAY (Port 8080)                    │
+│ • Handles DTO Validation (@Valid, @RestController)      │
+│ • Gateway Service & RestTemplate Routing                │
+│ • Health Monitoring Endpoint                           │
+└───────────────────────────┬────────────────────────────┘
+                            │ Forward Request
+                            ▼
+┌────────────────────────────────────────────────────────┐
+│ PYTHON RAG SEARCH SERVICE (Port 8000)                  │
+│ • Table-Aware Chunker (app/chunker.py)                 │
+│ • SentenceTransformers Vector Embeddings               │
+│ • Stage 1 Hybrid SQL RRF Search                        │
+│ • Stage 2 Cross-Encoder Reranking                      │
+└───────────────────────────┬────────────────────────────┘
+                            │ Query Vector & FTS
+                            ▼
+┌────────────────────────────────────────────────────────┐
+│ POSTGRESQL + PGVECTOR (Port 5432)                      │
+│ • HNSW Vector Cosine Index                             │
+│ • GIN Full-Text Keyword Search Index                   │
+│ • RBAC Metadata Array (allowed_roles)                  │
+└────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## CORE BACKEND SOFTWARE ENGINEERING PRINCIPLES
+## KEY SYSTEM FEATURES
 
-### 1. Zero-Downtime Blue-Green Database Swaps
-- Maintains twin indexing tables (`rag_index_a` and `rag_index_b`).
-- An `index_aliases` registry table points the live pointer `rag_index_live` to the active table.
-- Background workers build new indices on the staging table without locking read operations.
-- Once ingestion and vector embedding complete, an atomic pointer swap switches traffic instantaneously to the staging table.
+### 1. Spring Boot API Gateway (Java 17)
+- Exposes public REST endpoints on **Port 8080** for document ingestion (`/api/v1/documents/upload`), hybrid search (`/api/v1/search`), and health checks (`/health`).
+- Implements request payload validation (`jakarta.validation`), DTO mapping, and microservice proxy routing to the Python AI service.
 
-### 2. Hybrid Search Engine with Reciprocal Rank Fusion (RRF)
-- Combines **Dense Vector Cosine Similarity Search** (via `pgvector` HNSW indexes) and **PostgreSQL Full-Text Search (FTS)** (via GIN indexes on `to_tsvector`).
-- Merges vector and text keyword search ranks using **RRF** ($k=60$):
-  $$RRF\_Score = \frac{1}{60 + Rank_{vector}} + \frac{1}{60 + Rank_{text}}$$
+### 2. 2-Stage Hybrid Search & Reranking Engine
+- **Stage 1 (Hybrid RRF Search):** Combines **Dense Vector Search** (HNSW Cosine index) and **Full-Text Keyword Search** (GIN index) in PostgreSQL, merged natively in SQL via **Reciprocal Rank Fusion (RRF $k=60$)**.
+- **Stage 2 (Cross-Encoder Reranking):** Uses `cross-encoder/ms-marco-MiniLM-L-6-v2` to re-score candidate chunks for maximum precision.
 
 ### 3. Table-Aware Financial Chunker
 - Preserves HTML and Markdown tabular data (`| ... |` and `<table>`) as atomic, unbroken table chunks (`chunk_type="table"`).
-- Splits prose text by semantic headers (`#`, `##`, `Item 1A`, etc.) while tracking hierarchy context (`parent_section`).
+- Splits prose text by section headers (`#`, `##`, `Item 1A`, etc.) while tracking `parent_section` context.
 
-### 4. Content-Hash Gatekeeping
-- Computes SHA-256 content hashes of incoming financial reports.
-- If a document with identical SHA-256 hash exists in `document_registry`, re-embedding is skipped automatically to avoid expensive LLM/embedding compute costs.
-
-### 5. Two-Tier Caching & Role-Based Access Control (RBAC)
-- **L1 Exact-Match Redis Cache**: Caches serialized search JSON responses for fast retrieval (TTL: 600s). Invalidated automatically on database blue-green swaps.
-- **RBAC**: Database array overlapping query operator (`allowed_roles && user_roles::text[]`) filters chunks strictly based on user authorizations.
+### 4. Metadata-Based Role-Based Access Control (RBAC)
+- Filters chunks in PostgreSQL using array overlap matching (`allowed_roles && user_roles::text[]`) powered by GIN indexes.
 
 ---
 
 ## REPOSITORY STRUCTURE
 
 ```
-financial-rag-backend/
-├── app/
+FinSearch/
+├── gateway-service/           # Spring Boot API Gateway (Java 17, Maven, Port 8080)
+│   ├── Dockerfile
+│   ├── pom.xml
+│   └── src/
+│       └── main/
+│           ├── java/com/financialrag/gateway/
+│           │   ├── GatewayApplication.java
+│           │   ├── controller/GatewayController.java
+│           │   ├── dto/
+│           │   └── service/RagService.java
+│           └── resources/application.properties
+├── app/                       # Python AI Search Microservice (Port 8000)
 │   ├── __init__.py
-│   ├── main.py                # FastAPI Application & REST Endpoints
-│   ├── config.py              # System Configuration & Pydantic BaseSettings
-│   ├── database.py            # PostgreSQL Connection Pool & Redis Client
+│   ├── main.py                # REST Engine
+│   ├── config.py              # System Configuration
+│   ├── database.py            # PostgreSQL Connection Pool
 │   ├── chunker.py             # Table-Aware Financial Text Splitter
-│   ├── hybrid_search.py       # SQL Queries for Hybrid RRF Search
-│   ├── worker.py              # Redis Queue (RQ) Background Ingestion Worker
-│   └── models.py              # Pydantic Schemas for Requests & Responses
+│   ├── hybrid_search.py       # Stage 1 SQL RRF Search & Stage 2 Cross-Encoder Reranker
+│   └── models.py              # Pydantic Schemas
 ├── sql/
-│   └── schema.sql             # PostgreSQL DDL (Tables, HNSW Indexes, FTS GIN Indexes)
+│   └── schema.sql             # PostgreSQL DDL (HNSW Vector & FTS GIN Indexes)
+├── static/
+│   └── index.html             # Minimalist High-Contrast Test Interface
 ├── Dockerfile
 ├── docker-compose.yml
 ├── requirements.txt
@@ -92,146 +95,52 @@ financial-rag-backend/
 ## QUICK START GUIDE (DOCKER COMPOSE)
 
 ### 1. Launch Services
-Run all services (Postgres with `pgvector`, Redis, FastAPI app, and RQ worker):
+Run all microservices using Docker Compose:
 
 ```bash
 docker-compose up --build -d
 ```
 
+This spins up:
+- **PostgreSQL** with `pgvector` enabled (Port `5432`)
+- **Python AI Search Service** (Port `8000`)
+- **Spring Boot API Gateway** (Port `8080`)
+
 ### 2. Verify Health Status
-Check container health and live table alias:
+Check container health via the Spring Boot API Gateway:
 
 ```bash
-curl http://localhost:8000/health
-```
-
-Expected output:
-```json
-{
-  "status": "ok",
-  "database": "healthy",
-  "redis": "healthy",
-  "active_index_alias": "rag_index_a"
-}
+curl http://localhost:8080/health
 ```
 
 ---
 
 ## API REFERENCE & USAGE EXAMPLES
 
-### 1. Upload Financial Document (Asynchronous Ingestion)
-`POST /api/v1/documents/upload`
-
-Enqueues document ingestion in background Redis Queue worker.
+### 1. Upload Financial Document
+`POST http://localhost:8080/api/v1/documents/upload`
 
 ```bash
-curl -X POST "http://localhost:8000/api/v1/documents/upload" \
+curl -X POST "http://localhost:8080/api/v1/documents/upload" \
      -H "Content-Type: application/json" \
      -d '{
        "doc_id": "DOC-AAPL-10K-2024",
        "ticker_symbol": "AAPL",
        "filename": "aapl_2024_10k.md",
-       "content": "# Item 1. Business\nApple Inc. designs, manufactures, and markets smartphones, personal computers, tablets, wearables, and accessories.\n\n| Segment | 2024 Revenue ($M) |\n|---|---|\n| iPhone | 201183 |\n| Services | 96169 |\n| Wearables & Home | 37005 |",
+       "content": "# Item 1. Business\nApple Inc. designs smartphones...\n\n| Segment | 2024 Revenue ($M) |\n|---|---|\n| iPhone | 201183 |\n| Services | 96169 |",
        "allowed_roles": ["analyst", "admin"]
      }'
 ```
 
-Response (`202 Accepted`):
-```json
-{
-  "job_id": "c1f7b82e-9d22-481e-84b2-04e3abf105e1",
-  "status": "queued",
-  "message": "Document '\''DOC-AAPL-10K-2024'\'' enqueued successfully for background processing."
-}
-```
-
-### 2. Check Ingestion Task Status
-`GET /api/v1/jobs/{job_id}`
+### 2. 2-Stage Hybrid Search & Rerank Query
+`POST http://localhost:8080/api/v1/search`
 
 ```bash
-curl http://localhost:8000/api/v1/jobs/c1f7b82e-9d22-481e-84b2-04e3abf105e1
-```
-
-Response when finished:
-```json
-{
-  "job_id": "c1f7b82e-9d22-481e-84b2-04e3abf105e1",
-  "status": "finished",
-  "created_at": "2026-08-05T17:55:00Z",
-  "ended_at": "2026-08-05T17:55:02Z",
-  "result": {
-    "status": "finished",
-    "doc_id": "DOC-AAPL-10K-2024",
-    "version": 1,
-    "chunks_ingested": 2,
-    "active_table": "rag_index_b",
-    "content_hash": "a1b2c3..."
-  }
-}
-```
-
-### 3. Hybrid RRF Search
-`POST /api/v1/search`
-
-Executes Hybrid Vector + Full-Text Search with Reciprocal Rank Fusion.
-
-```bash
-curl -X POST "http://localhost:8000/api/v1/search" \
+curl -X POST "http://localhost:8080/api/v1/search" \
      -H "Content-Type: application/json" \
      -d '{
        "query": "What was Apple revenue for iPhone segment in 2024?",
        "user_roles": ["analyst"],
        "top_k": 5
      }'
-```
-
-Response:
-```json
-{
-  "query": "What was Apple revenue for iPhone segment in 2024?",
-  "cached": false,
-  "total_results": 1,
-  "results": [
-    {
-      "chunk_id": "DOC-AAPL-10K-2024_c1_a9b8c7d6",
-      "doc_id": "DOC-AAPL-10K-2024",
-      "ticker_symbol": "AAPL",
-      "parent_section": "Item 1. Business",
-      "content": "| Segment | 2024 Revenue ($M) |\n|---|---|\n| iPhone | 201183 |\n| Services | 96169 |\n| Wearables & Home | 37005 |",
-      "chunk_type": "table",
-      "allowed_roles": ["analyst", "admin"],
-      "rrf_score": 0.03278688524590164
-    }
-  ]
-}
-```
-
----
-
-## LOCAL DEVELOPMENT & TESTING
-
-### 1. Setup Virtual Environment
-```bash
-python -m venv venv
-# On Windows:
-venv\Scripts\activate
-# On Linux/macOS:
-source venv/bin/activate
-
-pip install -r requirements.txt
-```
-
-### 2. Run Database & Redis via Docker
-```bash
-docker-compose up -d postgres redis
-```
-
-### 3. Run RQ Worker locally
-```bash
-python -m app.worker
-```
-
-### 4. Run API Server locally
-```bash
-uvicorn app.main:app --reload --port 8000
 ```

@@ -80,6 +80,26 @@ public class RagService {
         return response.getBody();
     }
 
+    public org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody generateAnswerStream(GenerateAnswerRequestDto requestDto) {
+        String url = pythonServiceUrl + "/api/v1/generate-stream";
+        return outputStream -> {
+            restTemplate.execute(url, org.springframework.http.HttpMethod.POST, request -> {
+                request.getHeaders().setContentType(MediaType.APPLICATION_JSON);
+                new org.springframework.http.converter.json.MappingJackson2HttpMessageConverter()
+                    .getObjectMapper().writeValue(request.getBody(), requestDto);
+            }, response -> {
+                byte[] buffer = new byte[1024];
+                int bytesRead;
+                java.io.InputStream inputStream = response.getBody();
+                while ((bytesRead = inputStream.read(buffer)) != -1) {
+                    outputStream.write(buffer, 0, bytesRead);
+                    outputStream.flush();
+                }
+                return null;
+            });
+        };
+    }
+
     public String checkPythonHealth() {
         try {
             String url = pythonServiceUrl + "/health";

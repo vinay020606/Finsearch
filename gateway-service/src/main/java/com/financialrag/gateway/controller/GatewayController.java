@@ -64,5 +64,14 @@ public class GatewayController {
         GenerateAnswerResponseDto response = ragService.generateAnswer(requestDto);
         return ResponseEntity.ok(response);
     }
+
+    @PostMapping(value = "/api/v1/generate-stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public ResponseEntity<org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody> generateAnswerStream(@Valid @RequestBody GenerateAnswerRequestDto requestDto) {
+        org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody stream = ragService.generateAnswerStream(requestDto);
+        return ResponseEntity.ok()
+                .contentType(MediaType.TEXT_EVENT_STREAM)
+                .body(stream);
+    }
 }
+
 

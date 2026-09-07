@@ -333,14 +333,25 @@ The company faces intense competition in global technology markets and supply ch
                     </div>
                 </div>
 
-                <button type="submit" id="searchBtn">Execute Search & Rerank</button>
+                <div style="display: flex; gap: 10px;">
+                    <button type="submit" id="searchBtn">Execute Search & Rerank</button>
+                    <button type="button" id="streamBtn" class="btn-outline" style="border-color: #4CAF50; color: #4CAF50;" onclick="executeStreamGenerate()">⚡ Stream LLM Answer (Live)</button>
+                </div>
             </form>
 
             <div style="margin-top: 20px;">
                 <div class="panel-title" style="font-size: 0.85rem;">
-                    <span>Search Results</span>
+                    <span>LLM Context Synthesis Output (llmprompt.txt)</span>
+                    <span class="badge" style="border-color: #4CAF50; color: #4CAF50;">Live Token Streaming</span>
                 </div>
-                <div id="searchResults" style="max-height: 420px; overflow-y: auto;">
+                <div id="streamOutput" class="log-box" style="max-height: 220px; color: #e1e1e1; font-size: 0.85rem; border-color: #333;">Click "⚡ Stream LLM Answer" to see live context-augmented generation streaming token-by-token from llmprompt.txt context template.</div>
+            </div>
+
+            <div style="margin-top: 20px;">
+                <div class="panel-title" style="font-size: 0.85rem;">
+                    <span>Retrieved Search Chunks</span>
+                </div>
+                <div id="searchResults" style="max-height: 300px; overflow-y: auto;">
                     <div style="color: var(--text-dim); font-size: 0.8rem;">Run a query to view 2-stage hybrid search & cross-encoder rankings.</div>
                 </div>
             </div>
@@ -518,6 +529,51 @@ The company faces intense competition in global technology markets and supply ch
                 searchBtn.innerText = 'Execute Search & Rerank';
             }
         });
+
+        async function executeStreamGenerate() {
+            const streamBtn = document.getElementById('streamBtn');
+            const streamOutput = document.getElementById('streamOutput');
+            streamBtn.disabled = true;
+            streamBtn.innerText = '⚡ Streaming...';
+            streamOutput.innerText = '⚡ Connecting & retrieving financial context chunks...';
+
+            const roles = document.getElementById('userRoles').value.split(',').map(r => r.trim()).filter(r => r);
+            const payload = {
+                query: document.getElementById('searchQuery').value.trim(),
+                user_roles: roles,
+                top_k: parseInt(document.getElementById('topK').value, 10)
+            };
+
+            try {
+                const response = await fetch('/api/v1/generate-stream', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    streamOutput.innerText = `Error (${response.status}): Failed to establish stream stream.`;
+                    return;
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder('utf-8');
+                streamOutput.innerText = ''; // Clear status message
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    const tokenChunk = decoder.decode(value, { stream: true });
+                    streamOutput.innerText += tokenChunk;
+                    streamOutput.scrollTop = streamOutput.scrollHeight;
+                }
+            } catch (err) {
+                streamOutput.innerText = `Streaming Network Error: ${err.message}`;
+            } finally {
+                streamBtn.disabled = false;
+                streamBtn.innerText = '⚡ Stream LLM Answer (Live)';
+            }
+        }
 
         function escapeHtml(str) {
             return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");

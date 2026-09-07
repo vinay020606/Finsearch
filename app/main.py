@@ -6,7 +6,7 @@ import uuid
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, status, File, UploadFile, Form
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from sentence_transformers import SentenceTransformer
 import pypdf
@@ -21,7 +21,7 @@ from app.database import (
 )
 from app.chunker import chunk_financial_document
 from app.hybrid_search import execute_hybrid_rrf_search
-from app.llm_synthesizer import generate_humanized_answer
+from app.llm_synthesizer import generate_humanized_answer, stream_llm_answer
 from app.models import (
     DocumentUploadRequest,
     DocumentUploadResponse,
@@ -427,3 +427,47 @@ def generate_answer(payload: GenerateAnswerRequest):
         total_sources=len(results_items),
         sources=results_items
     )
+
+
+@app.post(
+    "/api/v1/generate-stream",
+    tags=["LLM Answer Synthesis"]
+)
+def generate_answer_stream(payload: GenerateAnswerRequest):
+    """
+    Retrieves relevant financial context chunks via Hybrid RRF + Cross-Encoder Reranking,
+    populates llmprompt.txt context prompt, and streams LLM response tokens in real time.
+    """
+    logger.info(f"Streaming LLM Answer for query='{payload.query}' (Roles={payload.user_roles})")
+
+    try:
+        model = get_embedding_model()
+        query_vector = model.encode(payload.query, show_progress_bar=False).tolist()
+    except Exception as emb_err:
+        logger.error(f"Failed to generate query embedding for streaming: {emb_err}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to compute embedding vector for query."
+        )
+
+    try:
+        with get_db_connection() as conn:
+            raw_results = execute_hybrid_rrf_search(
+                conn=conn,
+                query_text=payload.query,
+                query_vector=query_vector,
+                user_roles=payload.user_roles,
+                top_k=payload.top_k
+            )
+    except Exception as db_err:
+        logger.error(f"Hybrid RRF Search database execution error for streaming: {db_err}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Database search execution failed: {str(db_err)}"
+        )
+
+    return StreamingResponse(
+        stream_llm_answer(payload.query, raw_results),
+        media_type="text/event-stream"
+    )
+

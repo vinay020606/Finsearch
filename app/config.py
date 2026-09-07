@@ -25,6 +25,15 @@ class Settings(BaseSettings):
     DB_POOL_MIN: int = Field(default=1)
     DB_POOL_MAX: int = Field(default=20)
 
+    # AWS S3 & SQS Configuration
+    AWS_REGION: str = Field(default="us-east-1")
+    AWS_S3_BUCKET: str = Field(default="financial-rag-documents")
+    AWS_SQS_QUEUE_URL: str = Field(default="https://sqs.us-east-1.amazonaws.com/123456789012/financial-ingestion-queue")
+    AWS_ACCESS_KEY_ID: str = Field(default="")
+    AWS_SECRET_ACCESS_KEY: str = Field(default="")
+    S3_ENDPOINT_URL: str | None = Field(default=None)  # Optional custom S3 endpoint for MinIO/LocalStack
+
+
     @property
     def DATABASE_URL(self) -> str:
         return f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"

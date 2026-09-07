@@ -85,6 +85,7 @@ public class RagService {
         return outputStream -> {
             restTemplate.execute(url, org.springframework.http.HttpMethod.POST, request -> {
                 request.getHeaders().setContentType(MediaType.APPLICATION_JSON);
+                request.getHeaders().setAccept(java.util.Collections.singletonList(MediaType.TEXT_EVENT_STREAM));
                 new org.springframework.http.converter.json.MappingJackson2HttpMessageConverter()
                     .getObjectMapper().writeValue(request.getBody(), requestDto);
             }, response -> {

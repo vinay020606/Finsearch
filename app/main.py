@@ -246,11 +246,32 @@ def extract_text_from_file_bytes(file_bytes: bytes, filename: str) -> str:
             text_pages = []
             for idx, page in enumerate(reader.pages):
                 page_text = page.extract_text()
-                if page_text:
+                if page_text and len(page_text.strip()) > 30:
                     text_pages.append(f"--- Page {idx + 1} ---\n{page_text}")
+                else:
+                    # Low word count page or scanned PDF image page: trigger OCR fallback attempt
+                    ocr_success = False
+                    try:
+                        import pytesseract
+                        from pdf2image import convert_from_bytes
+                        images = convert_from_bytes(file_bytes, first_page=idx+1, last_page=idx+1)
+                        if images:
+                            ocr_text = pytesseract.image_to_string(images[0])
+                            if ocr_text and ocr_text.strip():
+                                text_pages.append(f"--- Page {idx + 1} (OCR Extracted) ---\n{ocr_text.strip()}")
+                                ocr_success = True
+                    except Exception as ocr_err:
+                        logger.debug(f"OCR fallback note for page {idx+1}: {ocr_err}")
+
+                    if not ocr_success:
+                        if page_text and page_text.strip():
+                            text_pages.append(f"--- Page {idx + 1} ---\n{page_text}")
+                        else:
+                            text_pages.append(f"--- Page {idx + 1} ---\n[Image / Non-text Content Page]")
+
             extracted = "\n\n".join(text_pages)
             if not extracted.strip():
-                raise ValueError("PDF contains no readable text stream.")
+                raise ValueError("PDF contains no readable text stream or OCR content.")
             return extracted
         except Exception as e:
             logger.error(f"Failed to extract text from PDF {filename}: {e}")

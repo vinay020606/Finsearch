@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS financial_chunks (
     parent_section TEXT NOT NULL,
     content TEXT NOT NULL,
     chunk_type VARCHAR(20) NOT NULL CHECK (chunk_type IN ('text', 'table')),
-    embedding vector(384) NOT NULL,
+    embedding vector(768) NOT NULL,
     allowed_roles TEXT[] NOT NULL DEFAULT ARRAY['admin', 'analyst'],
     content_tsvector tsvector GENERATED ALWAYS AS (to_tsvector('english', content)) STORED
 );

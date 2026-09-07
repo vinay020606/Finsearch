@@ -22,7 +22,7 @@ An enterprise microservices-based financial document search engine featuring a *
 ┌────────────────────────────────────────────────────────┐
 │ PYTHON RAG SEARCH SERVICE (Port 8000)                  │
 │ • Table-Aware Chunker (app/chunker.py)                 │
-│ • SentenceTransformers Vector Embeddings               │
+│ • BAAI/bge-base-en-v1.5 Vector Embeddings (768-dim)    │
 │ • Stage 1 Hybrid SQL RRF Search                        │
 │ • Stage 2 Cross-Encoder Reranking                      │
 └───────────────────────────┬────────────────────────────┘

@@ -40,7 +40,7 @@ def process_document_ingestion(
     2. Determines active/staging index tables from index_aliases.
     3. Prepares staging table by copying existing active data.
     4. Chunks document with table-aware splitter.
-    5. Generates 384-dim dense embeddings.
+    5. Generates 768-dim dense embeddings.
     6. Appends chunks into staging table.
     7. Atomically swaps live alias pointer to staging table (Blue-Green Swap).
     """

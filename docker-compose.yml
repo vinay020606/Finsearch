@@ -21,11 +21,14 @@ services:
       retries: 5
 
   app:
+    image: financial-rag-backend-app:latest
     build:
       context: .
       dockerfile: Dockerfile
     container_name: financial_rag_api
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
     restart: always
+
     ports:
       - "8000:8000"
     environment:
@@ -36,7 +39,11 @@ services:
       POSTGRES_DB: financial_rag
       EMBEDDING_MODEL_NAME: sentence-transformers/all-MiniLM-L6-v2
       CROSS_ENCODER_MODEL_NAME: cross-encoder/ms-marco-MiniLM-L-6-v2
+    volumes:
+      - ./app:/app/app
+      - ./static:/app/static
     depends_on:
+
       postgres:
         condition: service_healthy
 

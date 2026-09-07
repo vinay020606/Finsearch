@@ -1,13 +1,16 @@
 import hashlib
+import io
 import logging
 import os
 import uuid
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, HTTPException, status, File, UploadFile, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from sentence_transformers import SentenceTransformer
+import pypdf
+
 
 from app.config import settings
 from app.database import (
@@ -234,6 +237,72 @@ def upload_document(payload: DocumentUploadRequest):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Document ingestion failed: {str(e)}"
         )
+
+
+def extract_text_from_file_bytes(file_bytes: bytes, filename: str) -> str:
+    filename_lower = filename.lower()
+    if filename_lower.endswith(".pdf"):
+        try:
+            reader = pypdf.PdfReader(io.BytesIO(file_bytes))
+            text_pages = []
+            for idx, page in enumerate(reader.pages):
+                page_text = page.extract_text()
+                if page_text:
+                    text_pages.append(f"--- Page {idx + 1} ---\n{page_text}")
+            extracted = "\n\n".join(text_pages)
+            if not extracted.strip():
+                raise ValueError("PDF contains no readable text stream.")
+            return extracted
+        except Exception as e:
+            logger.error(f"Failed to extract text from PDF {filename}: {e}")
+            raise HTTPException(status_code=400, detail=f"Could not parse text from PDF file: {e}")
+    else:
+        try:
+            return file_bytes.decode("utf-8")
+        except UnicodeDecodeError:
+            return file_bytes.decode("latin-1", errors="replace")
+
+
+@app.post(
+    "/api/v1/documents/upload-file",
+    response_model=DocumentUploadResponse,
+    status_code=status.HTTP_201_CREATED,
+    tags=["Document Ingestion"]
+)
+async def upload_document_file(
+    file: UploadFile = File(...),
+    doc_id: str = Form(...),
+    ticker_symbol: str = Form(...),
+    allowed_roles: str = Form("admin,analyst")
+):
+    """
+    Accepts multipart/form-data file upload (PDF, TXT, MD, JSON, CSV), extracts content, and ingests into RAG pipeline.
+    """
+    try:
+        file_bytes = await file.read()
+        if not file_bytes:
+            raise HTTPException(status_code=400, detail="Uploaded file is empty.")
+
+        extracted_content = extract_text_from_file_bytes(file_bytes, file.filename)
+        roles = [r.strip() for r in allowed_roles.split(",") if r.strip()]
+
+        payload = DocumentUploadRequest(
+            doc_id=doc_id.strip(),
+            ticker_symbol=ticker_symbol.strip(),
+            filename=file.filename,
+            content=extracted_content,
+            allowed_roles=roles
+        )
+        return upload_document(payload)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to process uploaded file: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Multipart file upload failed: {str(e)}"
+        )
+
 
 
 @app.post(

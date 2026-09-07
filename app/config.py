@@ -17,9 +17,9 @@ class Settings(BaseSettings):
     POSTGRES_PORT: int = Field(default=5432)
 
     # Model Settings
-    EMBEDDING_MODEL_NAME: str = Field(default="sentence-transformers/all-MiniLM-L6-v2")
+    EMBEDDING_MODEL_NAME: str = Field(default="BAAI/bge-base-en-v1.5")
     CROSS_ENCODER_MODEL_NAME: str = Field(default="cross-encoder/ms-marco-MiniLM-L-6-v2")
-    EMBEDDING_DIMENSION: int = Field(default=384)
+    EMBEDDING_DIMENSION: int = Field(default=768)
 
     # Connection Pool Settings
     DB_POOL_MIN: int = Field(default=1)

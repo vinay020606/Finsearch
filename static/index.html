@@ -243,10 +243,22 @@
         <div class="panel">
             <div class="panel-title">
                 <span>1. Upload Document</span>
-                <span class="badge">RBAC Metadata + Table Chunker</span>
+                <span class="badge">File Upload / Drag & Drop / PDF & Text</span>
             </div>
 
             <form id="uploadForm">
+                <!-- Dropzone Area -->
+                <div class="form-group">
+                    <label>Upload Document File (Drag & Drop or Click to Select)</label>
+                    <div id="dropZone" style="border: 2px dashed var(--border-focus); padding: 20px; text-align: center; background: var(--bg); cursor: pointer; border-radius: 4px; transition: border-color 0.2s, background-color 0.2s; margin-bottom: 10px;">
+                        <input type="file" id="fileInput" accept=".txt,.md,.pdf,.json,.csv" style="display: none;">
+                        <div id="dropZoneText" style="font-size: 0.85rem; color: var(--text-dim);">
+                            📁 Drag & Drop your file here, or <span style="color: var(--accent); text-decoration: underline;">Browse Files</span><br>
+                            <span style="font-size: 0.75rem;">Supported formats: .pdf, .txt, .md, .csv, .json</span>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="row-flex">
                     <div class="form-group">
                         <label>Doc ID</label>
@@ -270,7 +282,7 @@
                 </div>
 
                 <div class="form-group">
-                    <label>Document Content (Markdown / Text / Tables)</label>
+                    <label>Document Content (Preview / Manual Paste)</label>
                     <textarea id="docContent" required># Item 1. Business
 Apple Inc. designs, manufactures, and markets smartphones, personal computers, tablets, wearables, and accessories.
 
@@ -336,6 +348,61 @@ The company faces intense competition in global technology markets and supply ch
     </div>
 
     <script>
+        let selectedFile = null;
+
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const dropZoneText = document.getElementById('dropZoneText');
+
+        dropZone.addEventListener('click', () => fileInput.click());
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.style.borderColor = '#ffffff';
+            dropZone.style.backgroundColor = '#1e1e1e';
+        });
+
+        dropZone.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            dropZone.style.borderColor = 'var(--border-focus)';
+            dropZone.style.backgroundColor = 'var(--bg)';
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.style.borderColor = 'var(--border-focus)';
+            dropZone.style.backgroundColor = 'var(--bg)';
+            if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                handleFileSelection(e.dataTransfer.files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files && e.target.files.length > 0) {
+                handleFileSelection(e.target.files[0]);
+            }
+        });
+
+        function handleFileSelection(file) {
+            selectedFile = file;
+            document.getElementById('filename').value = file.name;
+            const nameWithoutExt = file.name.replace(/\.[^/.]+$/, "").toUpperCase();
+            const ticker = document.getElementById('ticker').value.trim() || 'DOC';
+            document.getElementById('docId').value = `DOC-${ticker}-${nameWithoutExt}`;
+
+            dropZoneText.innerHTML = `✅ Selected File: <strong>${file.name}</strong> (${(file.size / 1024).toFixed(1)} KB)`;
+
+            if (file.name.toLowerCase().endsWith('.pdf')) {
+                document.getElementById('docContent').value = `[PDF Document Attached: ${file.name}]\nText content will be automatically extracted during processing.`;
+            } else {
+                const reader = new FileReader();
+                reader.onload = (evt) => {
+                    document.getElementById('docContent').value = evt.target.result;
+                };
+                reader.readAsText(file);
+            }
+        }
+
         async function checkHealth() {
             try {
                 const res = await fetch('/health');
@@ -354,21 +421,36 @@ The company faces intense competition in global technology markets and supply ch
 
             const roles = document.getElementById('allowedRoles').value.split(',').map(r => r.trim()).filter(r => r);
 
-            const payload = {
-                doc_id: document.getElementById('docId').value.trim(),
-                ticker_symbol: document.getElementById('ticker').value.trim(),
-                filename: document.getElementById('filename').value.trim(),
-                content: document.getElementById('docContent').value,
-                allowed_roles: roles
-            };
-
             try {
-                const res = await fetch('/api/v1/documents/upload', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                const data = await res.json();
+                let res, data;
+                if (selectedFile) {
+                    const formData = new FormData();
+                    formData.append('file', selectedFile);
+                    formData.append('doc_id', document.getElementById('docId').value.trim());
+                    formData.append('ticker_symbol', document.getElementById('ticker').value.trim());
+                    formData.append('allowed_roles', roles.join(','));
+
+                    res = await fetch('/api/v1/documents/upload-file', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    data = await res.json();
+                } else {
+                    const payload = {
+                        doc_id: document.getElementById('docId').value.trim(),
+                        ticker_symbol: document.getElementById('ticker').value.trim(),
+                        filename: document.getElementById('filename').value.trim(),
+                        content: document.getElementById('docContent').value,
+                        allowed_roles: roles
+                    };
+
+                    res = await fetch('/api/v1/documents/upload', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    data = await res.json();
+                }
 
                 if (res.ok) {
                     document.getElementById('uploadStatusOutput').innerText = `Success!\nDoc ID: ${data.doc_id}\nStatus: ${data.status}\nChunks Ingested: ${data.chunks_ingested}\nMessage: ${data.message}`;
@@ -383,6 +465,7 @@ The company faces intense competition in global technology markets and supply ch
                 uploadBtn.innerText = 'Ingest & Embed Document';
             }
         });
+
 
         document.getElementById('searchForm').addEventListener('submit', async (e) => {
             e.preventDefault();

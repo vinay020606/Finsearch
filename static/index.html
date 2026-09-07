@@ -3,18 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Financial RAG Engine // Minimal Test Interface</title>
+    <title>FinSearch // Professional Financial RAG Engine</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg: #0d0d0d;
-            --surface: #141414;
-            --border: #2a2a2a;
-            --border-focus: #555555;
-            --text: #e1e1e1;
-            --text-dim: #888888;
+            --bg: #090d16;
+            --surface: #111827;
+            --surface-hover: #1f2937;
+            --border: #1f2937;
+            --border-focus: #4b5563;
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --text-dim: #6b7280;
             --accent: #ffffff;
-            --code-bg: #1a1a1a;
-            --font-mono: 'Courier New', Courier, monospace;
+            --emerald: #10b981;
+            --blue: #3b82f6;
+            --code-bg: #030712;
+            --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
         }
 
         * {
@@ -25,54 +33,71 @@
 
         body {
             background-color: var(--bg);
-            color: var(--text);
-            font-family: var(--font-mono);
-            padding: 24px;
-            max-width: 1400px;
+            color: var(--text-main);
+            font-family: var(--font-sans);
+            padding: 32px 24px;
+            max-width: 1300px;
             margin: 0 auto;
             line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
         }
 
         header {
-            border-bottom: 2px solid var(--border);
-            padding-bottom: 16px;
-            margin-bottom: 24px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 20px;
+            margin-bottom: 32px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
-            gap: 12px;
+            gap: 16px;
         }
 
-        h1 {
-            font-size: 1.25rem;
-            letter-spacing: 1px;
-            text-transform: uppercase;
+        .brand-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
             color: var(--accent);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .brand-badge {
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            background: #1f2937;
+            color: #9ca3af;
+            padding: 2px 8px;
+            border-radius: 4px;
+            border: 1px solid #374151;
+            font-weight: 500;
         }
 
         .health-bar {
             display: flex;
+            align-items: center;
             gap: 16px;
-            font-size: 0.85rem;
+            font-family: var(--font-mono);
+            font-size: 0.78rem;
             background: var(--surface);
-            padding: 8px 16px;
+            padding: 6px 14px;
             border: 1px solid var(--border);
-            border-radius: 4px;
+            border-radius: 6px;
         }
 
-        .health-item span {
-            color: var(--accent);
-            font-weight: bold;
+        .health-status {
+            color: var(--emerald);
+            font-weight: 600;
         }
 
         .grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 24px;
+            grid-template-columns: 420px 1fr;
+            gap: 28px;
         }
 
-        @media (max-width: 900px) {
+        @media (max-width: 1024px) {
             .grid {
                 grid-template-columns: 1fr;
             }
@@ -81,33 +106,38 @@
         .panel {
             background: var(--surface);
             border: 1px solid var(--border);
-            border-radius: 4px;
-            padding: 20px;
+            border-radius: 8px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
         }
 
-        .panel-title {
-            font-size: 1rem;
+        .panel-header {
+            font-size: 0.9rem;
+            font-weight: 600;
             text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 16px;
+            letter-spacing: 0.5px;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
             border-bottom: 1px solid var(--border);
-            padding-bottom: 8px;
-            color: var(--accent);
+            color: var(--text-main);
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
 
         .form-group {
-            margin-bottom: 14px;
+            margin-bottom: 16px;
         }
 
         label {
             display: block;
             font-size: 0.75rem;
+            font-weight: 500;
             text-transform: uppercase;
-            color: var(--text-dim);
-            margin-bottom: 4px;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            margin-bottom: 6px;
         }
 
         input[type="text"],
@@ -116,13 +146,13 @@
             width: 100%;
             background: var(--bg);
             border: 1px solid var(--border);
-            color: var(--text);
+            color: var(--text-main);
             padding: 10px 12px;
-            font-family: var(--font-mono);
-            font-size: 0.85rem;
-            border-radius: 2px;
+            font-family: var(--font-sans);
+            font-size: 0.88rem;
+            border-radius: 6px;
             outline: none;
-            transition: border-color 0.2s;
+            transition: border-color 0.15s ease;
         }
 
         input:focus, textarea:focus {
@@ -131,88 +161,153 @@
 
         textarea {
             resize: vertical;
-            min-height: 140px;
+            min-height: 120px;
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
         }
 
-        button {
+        .drop-zone {
+            border: 1px dashed var(--border-focus);
+            border-radius: 6px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            background: var(--bg);
+            transition: all 0.2s;
+            margin-bottom: 16px;
+        }
+
+        .drop-zone:hover {
+            border-color: var(--accent);
+            background: #111827;
+        }
+
+        .btn {
             background: var(--accent);
             color: #000000;
             border: none;
-            padding: 10px 18px;
-            font-family: var(--font-mono);
-            font-weight: bold;
+            padding: 11px 20px;
+            font-family: var(--font-sans);
+            font-weight: 600;
             font-size: 0.85rem;
-            text-transform: uppercase;
+            border-radius: 6px;
             cursor: pointer;
-            border-radius: 2px;
-            transition: opacity 0.2s;
+            transition: opacity 0.15s;
+            width: 100%;
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
         }
 
-        button:hover {
-            opacity: 0.85;
+        .btn:hover {
+            opacity: 0.9;
         }
 
-        button:disabled {
+        .btn:disabled {
             background: var(--text-dim);
             cursor: not-allowed;
+            opacity: 0.6;
         }
 
-        .btn-outline {
+        .btn-secondary {
             background: transparent;
-            color: var(--text);
+            color: var(--text-main);
             border: 1px solid var(--border);
         }
 
-        .btn-outline:hover {
-            background: var(--border);
+        .btn-secondary:hover {
+            background: var(--surface-hover);
         }
 
-        .log-box {
-            background: var(--bg);
+        /* SSE Execution Pipeline Tracker */
+        .pipeline-tracker {
+            background: var(--code-bg);
             border: 1px solid var(--border);
-            padding: 12px;
+            border-radius: 6px;
+            padding: 16px;
+            margin-bottom: 20px;
+            font-family: var(--font-mono);
             font-size: 0.8rem;
-            max-height: 200px;
-            overflow-y: auto;
-            margin-top: 12px;
-            white-space: pre-wrap;
-            word-break: break-all;
         }
 
-        .badge {
+        .step-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 4px 0;
+            color: var(--text-dim);
+            transition: color 0.2s;
+        }
+
+        .step-item.active {
+            color: #60a5fa;
+            font-weight: 500;
+        }
+
+        .step-item.completed {
+            color: var(--emerald);
+        }
+
+        .step-icon {
+            width: 16px;
+            text-align: center;
             display: inline-block;
-            padding: 2px 6px;
-            font-size: 0.7rem;
-            border: 1px solid var(--text-dim);
-            border-radius: 2px;
-            text-transform: uppercase;
         }
 
-        .result-card {
+        /* Answer Output Area */
+        .answer-box {
+            background: var(--code-bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 20px;
+            font-size: 0.92rem;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            min-height: 180px;
+            max-height: 380px;
+            overflow-y: auto;
+            color: #e5e7eb;
+            margin-bottom: 20px;
+        }
+
+        .answer-placeholder {
+            color: var(--text-dim);
+            font-size: 0.85rem;
+            font-style: italic;
+        }
+
+        /* Source Disclosures Card */
+        .source-card {
             background: var(--bg);
             border: 1px solid var(--border);
-            padding: 14px;
-            margin-bottom: 12px;
-            border-radius: 2px;
+            border-radius: 6px;
+            padding: 12px 14px;
+            margin-bottom: 10px;
+            font-size: 0.82rem;
         }
 
-        .result-header {
+        .source-header {
             display: flex;
             justify-content: space-between;
+            font-family: var(--font-mono);
             font-size: 0.75rem;
-            color: var(--text-dim);
-            margin-bottom: 8px;
+            color: var(--text-muted);
+            margin-bottom: 6px;
             border-bottom: 1px dashed var(--border);
             padding-bottom: 4px;
         }
 
-        .result-content {
-            font-size: 0.85rem;
-            white-space: pre-wrap;
+        .source-content {
+            font-family: var(--font-mono);
+            font-size: 0.78rem;
+            color: var(--text-muted);
             background: var(--code-bg);
-            padding: 10px;
-            border-radius: 2px;
+            padding: 8px;
+            border-radius: 4px;
+            white-space: pre-wrap;
             overflow-x: auto;
+            max-height: 120px;
         }
 
         .row-flex {
@@ -223,136 +318,140 @@
         .row-flex > div {
             flex: 1;
         }
+
+        .status-msg {
+            font-family: var(--font-mono);
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-top: 10px;
+            word-break: break-all;
+        }
     </style>
 </head>
 <body>
 
     <header>
-        <div>
-            <h1>Financial RAG Search Engine</h1>
-            <div style="font-size: 0.75rem; color: var(--text-dim);">Minimal Monochrome Test Interface</div>
+        <div class="brand-title">
+            <span>FINSEARCH</span>
+            <span class="brand-badge">PRO RAG // 768-DIM BAAI ENGINE</span>
         </div>
-        <div class="health-bar" id="healthBar">
-            <div class="health-item">DB STATUS: <span id="healthDb">...</span></div>
-            <button class="btn-outline" style="padding: 2px 8px; font-size: 0.7rem;" onclick="checkHealth()">REFRESH</button>
+        <div class="health-bar">
+            <div>SYSTEM: <span id="healthGateway" class="health-status">ONLINE</span></div>
+            <div>DB: <span id="healthDb" class="health-status">READY</span></div>
         </div>
     </header>
 
     <div class="grid">
         <!-- LEFT PANEL: DOCUMENT INGESTION -->
         <div class="panel">
-            <div class="panel-title">
-                <span>1. Upload Document</span>
-                <span class="badge">File Upload / Drag & Drop / PDF & Text</span>
+            <div class="panel-header">
+                <span>Document Ingestion</span>
+                <span class="brand-badge">S3 & Vector Pipeline</span>
             </div>
 
             <form id="uploadForm">
-                <!-- Dropzone Area -->
-                <div class="form-group">
-                    <label>Upload Document File (Drag & Drop or Click to Select)</label>
-                    <div id="dropZone" style="border: 2px dashed var(--border-focus); padding: 20px; text-align: center; background: var(--bg); cursor: pointer; border-radius: 4px; transition: border-color 0.2s, background-color 0.2s; margin-bottom: 10px;">
-                        <input type="file" id="fileInput" accept=".txt,.md,.pdf,.json,.csv" style="display: none;">
-                        <div id="dropZoneText" style="font-size: 0.85rem; color: var(--text-dim);">
-                            📁 Drag & Drop your file here, or <span style="color: var(--accent); text-decoration: underline;">Browse Files</span><br>
-                            <span style="font-size: 0.75rem;">Supported formats: .pdf, .txt, .md, .csv, .json</span>
-                        </div>
+                <div class="drop-zone" id="dropZone">
+                    <input type="file" id="fileInput" style="display: none;" accept=".pdf,.txt,.md,.json,.csv">
+                    <div id="dropZoneText" style="font-size: 0.85rem; color: var(--text-muted);">
+                        📁 Drag & Drop Document (PDF, MD, TXT)<br>
+                        <span style="font-size: 0.75rem; color: var(--text-dim);">or click to select file</span>
                     </div>
                 </div>
 
                 <div class="row-flex">
                     <div class="form-group">
-                        <label>Doc ID</label>
-                        <input type="text" id="docId" value="DOC-AAPL-10K-2024" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Ticker</label>
+                        <label>Ticker Symbol</label>
                         <input type="text" id="ticker" value="AAPL" required>
                     </div>
-                </div>
-
-                <div class="row-flex">
                     <div class="form-group">
-                        <label>Filename</label>
-                        <input type="text" id="filename" value="aapl_2024_10k.md" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Allowed Roles (Metadata Array)</label>
-                        <input type="text" id="allowedRoles" value="analyst, admin" required>
+                        <label>Document ID</label>
+                        <input type="text" id="docId" value="DOC-AAPL-2024" required>
                     </div>
                 </div>
 
                 <div class="form-group">
-                    <label>Document Content (Preview / Manual Paste)</label>
-                    <textarea id="docContent" required># Item 1. Business
-Apple Inc. designs, manufactures, and markets smartphones, personal computers, tablets, wearables, and accessories.
+                    <label>Filename</label>
+                    <input type="text" id="filename" value="aapl_2024_10k.md" required>
+                </div>
 
-## Financial Performance
+                <div class="form-group">
+                    <label>RBAC Access Roles</label>
+                    <input type="text" id="allowedRoles" value="admin,analyst" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Document Content Payload</label>
+                    <textarea id="docContent" placeholder="Enter text or table payload if not uploading file..."># Item 1. Business
+Apple Inc. designs, manufactures, and markets smartphones, personal computers, tablets, wearables, and accessories.
 
 | Segment | 2024 Revenue ($M) | 2023 Revenue ($M) |
 |---|---|---|
 | iPhone | 201183 | 200583 |
 | Services | 96169 | 85200 |
-| Wearables & Home | 37005 | 39845 |
+| Wearables | 37005 | 39845 |
 
 Item 1A. Risk Factors
-The company faces intense competition in global technology markets and supply chain risks.</textarea>
+Global supply chain disruptions and competition represent key operational risk factors.</textarea>
                 </div>
 
-                <button type="submit" id="uploadBtn">Ingest & Embed Document</button>
+                <button type="submit" id="uploadBtn" class="btn">Upload & Index Document</button>
             </form>
 
-            <div style="margin-top: 20px;">
-                <div class="panel-title" style="font-size: 0.85rem;">
-                    <span>Ingestion Log</span>
-                </div>
-                <div id="uploadStatusOutput" class="log-box">No document ingested yet.</div>
-            </div>
+            <div id="uploadStatusOutput" class="status-msg" style="margin-top: 16px;"></div>
         </div>
 
-        <!-- RIGHT PANEL: HYBRID SEARCH ENGINE -->
+        <!-- RIGHT PANEL: FINANCIAL QUERY & SSE STREAMING -->
         <div class="panel">
-            <div class="panel-title">
-                <span>2. 2-Stage Hybrid Search & Reranking</span>
-                <span class="badge">RRF + Cross-Encoder</span>
+            <div class="panel-header">
+                <span>Financial Analysis & LLM Synthesis</span>
+                <span class="brand-badge" style="color: var(--emerald); border-color: var(--emerald);">SSE Stream Engine</span>
             </div>
 
             <form id="searchForm">
                 <div class="form-group">
-                    <label>Search Query</label>
+                    <label>Financial Query</label>
                     <input type="text" id="searchQuery" value="What was Apple revenue for iPhone segment in 2024?" required>
                 </div>
 
                 <div class="row-flex">
                     <div class="form-group">
-                        <label>User Roles (RBAC Metadata Filter)</label>
+                        <label>User Role Metadata</label>
                         <input type="text" id="userRoles" value="analyst" required>
                     </div>
                     <div class="form-group">
-                        <label>Top K Results</label>
+                        <label>Top K Chunks</label>
                         <input type="number" id="topK" value="5" min="1" max="20" required>
                     </div>
                 </div>
 
-                <div style="display: flex; gap: 10px;">
-                    <button type="submit" id="searchBtn">Execute Search & Rerank</button>
-                    <button type="button" id="streamBtn" class="btn-outline" style="border-color: #4CAF50; color: #4CAF50;" onclick="executeStreamGenerate()">⚡ Stream LLM Answer (Live)</button>
-                </div>
+                <button type="submit" id="searchBtn" class="btn">⚡ Execute Query & Stream Analysis</button>
             </form>
 
-            <div style="margin-top: 20px;">
-                <div class="panel-title" style="font-size: 0.85rem;">
-                    <span>LLM Context Synthesis Output (llmprompt.txt)</span>
-                    <span class="badge" style="border-color: #4CAF50; color: #4CAF50;">Live Token Streaming</span>
+            <!-- REAL-TIME SSE PIPELINE EXECUTION TRACKER -->
+            <div style="margin-top: 24px;">
+                <label>Pipeline Execution Tracker (Server-Sent Events)</label>
+                <div class="pipeline-tracker" id="pipelineTracker">
+                    <div class="step-item" id="step1"><span class="step-icon">○</span> Step 1: Compute Query Embedding Vector (768-dim BAAI/bge-base-en-v1.5)</div>
+                    <div class="step-item" id="step2"><span class="step-icon">○</span> Step 2: Stage 1 Hybrid SQL RRF Search (HNSW Vector + BM25 tsvector)</div>
+                    <div class="step-item" id="step3"><span class="step-icon">○</span> Step 3: Stage 2 Cross-Encoder Reranking (ms-marco-MiniLM-L-6-v2)</div>
+                    <div class="step-item" id="step4"><span class="step-icon">○</span> Step 4: Populate Context Prompt from llmprompt.txt</div>
+                    <div class="step-item" id="step5"><span class="step-icon">○</span> Step 5: Stream LLM Financial Analysis</div>
                 </div>
-                <div id="streamOutput" class="log-box" style="max-height: 220px; color: #e1e1e1; font-size: 0.85rem; border-color: #333;">Click "⚡ Stream LLM Answer" to see live context-augmented generation streaming token-by-token from llmprompt.txt context template.</div>
             </div>
 
-            <div style="margin-top: 20px;">
-                <div class="panel-title" style="font-size: 0.85rem;">
-                    <span>Retrieved Search Chunks</span>
+            <!-- STREAMED RESPONSE DISPLAY CONTAINER -->
+            <div>
+                <label>Synthesized Financial Answer (Live Stream)</label>
+                <div id="answerBox" class="answer-box">
+                    <span class="answer-placeholder">Submit a query to observe real-time pipeline execution and token streaming output.</span>
                 </div>
-                <div id="searchResults" style="max-height: 300px; overflow-y: auto;">
-                    <div style="color: var(--text-dim); font-size: 0.8rem;">Run a query to view 2-stage hybrid search & cross-encoder rankings.</div>
+            </div>
+
+            <!-- RETRIEVED SOURCES -->
+            <div>
+                <label>Retrieved Context Disclosures</label>
+                <div id="sourcesContainer" style="max-height: 250px; overflow-y: auto;">
+                    <div style="color: var(--text-dim); font-size: 0.8rem; font-style: italic;">Retrieved sources will appear here following retrieval.</div>
                 </div>
             </div>
         </div>
@@ -360,7 +459,6 @@ The company faces intense competition in global technology markets and supply ch
 
     <script>
         let selectedFile = null;
-
         const dropZone = document.getElementById('dropZone');
         const fileInput = document.getElementById('fileInput');
         const dropZoneText = document.getElementById('dropZoneText');
@@ -369,20 +467,17 @@ The company faces intense competition in global technology markets and supply ch
 
         dropZone.addEventListener('dragover', (e) => {
             e.preventDefault();
-            dropZone.style.borderColor = '#ffffff';
-            dropZone.style.backgroundColor = '#1e1e1e';
+            dropZone.style.borderColor = 'var(--accent)';
         });
 
         dropZone.addEventListener('dragleave', (e) => {
             e.preventDefault();
             dropZone.style.borderColor = 'var(--border-focus)';
-            dropZone.style.backgroundColor = 'var(--bg)';
         });
 
         dropZone.addEventListener('drop', (e) => {
             e.preventDefault();
             dropZone.style.borderColor = 'var(--border-focus)';
-            dropZone.style.backgroundColor = 'var(--bg)';
             if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
                 handleFileSelection(e.dataTransfer.files[0]);
             }
@@ -404,7 +499,7 @@ The company faces intense competition in global technology markets and supply ch
             dropZoneText.innerHTML = `✅ Selected File: <strong>${file.name}</strong> (${(file.size / 1024).toFixed(1)} KB)`;
 
             if (file.name.toLowerCase().endsWith('.pdf')) {
-                document.getElementById('docContent').value = `[PDF Document Attached: ${file.name}]\nText content will be automatically extracted during processing.`;
+                document.getElementById('docContent').value = `[PDF Document Attached: ${file.name}]\nText stream will be automatically extracted during ingestion.`;
             } else {
                 const reader = new FileReader();
                 reader.onload = (evt) => {
@@ -418,17 +513,19 @@ The company faces intense competition in global technology markets and supply ch
             try {
                 const res = await fetch('/health');
                 const data = await res.json();
-                document.getElementById('healthDb').innerText = data.database;
+                document.getElementById('healthDb').innerText = data.database === 'healthy' ? 'READY' : data.database;
             } catch (err) {
-                document.getElementById('healthDb').innerText = 'ERROR';
+                document.getElementById('healthDb').innerText = 'DEGRADED';
             }
         }
 
         document.getElementById('uploadForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const uploadBtn = document.getElementById('uploadBtn');
+            const statusOutput = document.getElementById('uploadStatusOutput');
             uploadBtn.disabled = true;
-            uploadBtn.innerText = 'Ingesting & Embedding...';
+            uploadBtn.innerText = 'Uploading & Indexing...';
+            statusOutput.innerText = 'Processing document upload...';
 
             const roles = document.getElementById('allowedRoles').value.split(',').map(r => r.trim()).filter(r => r);
 
@@ -464,78 +561,33 @@ The company faces intense competition in global technology markets and supply ch
                 }
 
                 if (res.ok) {
-                    document.getElementById('uploadStatusOutput').innerText = `Success!\nDoc ID: ${data.doc_id}\nStatus: ${data.status}\nChunks Ingested: ${data.chunks_ingested}\nMessage: ${data.message}`;
+                    statusOutput.innerText = `✓ Successfully Ingested! Doc ID: ${data.doc_id} | Chunks: ${data.chunks_ingested} | Storage: ${data.file_path}`;
                     checkHealth();
                 } else {
-                    document.getElementById('uploadStatusOutput').innerText = `Error (${res.status}): ${JSON.stringify(data)}`;
+                    statusOutput.innerText = `❌ Error (${res.status}): ${JSON.stringify(data)}`;
                 }
             } catch (err) {
-                document.getElementById('uploadStatusOutput').innerText = `Network Error: ${err.message}`;
+                statusOutput.innerText = `❌ Network Error: ${err.message}`;
             } finally {
                 uploadBtn.disabled = false;
-                uploadBtn.innerText = 'Ingest & Embed Document';
+                uploadBtn.innerText = 'Upload & Index Document';
             }
         });
 
 
+        // REAL-TIME SSE PIPELINE & STREAMING QUERY HANDLER
         document.getElementById('searchForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const searchBtn = document.getElementById('searchBtn');
+            const answerBox = document.getElementById('answerBox');
+            const sourcesContainer = document.getElementById('sourcesContainer');
+
             searchBtn.disabled = true;
-            searchBtn.innerText = 'Searching & Reranking...';
+            searchBtn.innerText = '⚡ Processing Pipeline...';
+            answerBox.innerText = '';
+            sourcesContainer.innerHTML = '<div style="color: var(--text-dim); font-size: 0.8rem;">Retrieving disclosures...</div>';
 
-            const roles = document.getElementById('userRoles').value.split(',').map(r => r.trim()).filter(r => r);
-
-            const payload = {
-                query: document.getElementById('searchQuery').value.trim(),
-                user_roles: roles,
-                top_k: parseInt(document.getElementById('topK').value, 10)
-            };
-
-            const resultsContainer = document.getElementById('searchResults');
-
-            try {
-                const res = await fetch('/api/v1/search', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                const data = await res.json();
-
-                if (res.ok) {
-                    if (!data.results || data.results.length === 0) {
-                        resultsContainer.innerHTML = '<div style="color: var(--text-dim); font-size: 0.85rem; padding: 10px;">No matching results found (check RBAC roles or query).</div>';
-                    } else {
-                        resultsContainer.innerHTML = data.results.map((item, idx) => `
-                            <div class="result-card">
-                                <div class="result-header">
-                                    <span>#${idx + 1} | TYPE: ${item.chunk_type.toUpperCase()} | DOC: ${item.doc_id} (${item.ticker_symbol})</span>
-                                    <span>RERANK: ${item.rerank_score.toFixed(4)} | RRF: ${item.rrf_score.toFixed(4)}</span>
-                                </div>
-                                <div style="font-size: 0.75rem; color: var(--text-dim); margin-bottom: 6px;">
-                                    SECTION: ${item.parent_section} | ROLES: [${item.allowed_roles.join(', ')}]
-                                </div>
-                                <div class="result-content">${escapeHtml(item.content)}</div>
-                            </div>
-                        `).join('');
-                    }
-                } else {
-                    resultsContainer.innerHTML = `<div style="color: red; font-size: 0.85rem; padding: 10px;">Error (${res.status}): ${JSON.stringify(data)}</div>`;
-                }
-            } catch (err) {
-                resultsContainer.innerHTML = `<div style="color: red; font-size: 0.85rem; padding: 10px;">Search Network Error: ${err.message}</div>`;
-            } finally {
-                searchBtn.disabled = false;
-                searchBtn.innerText = 'Execute Search & Rerank';
-            }
-        });
-
-        async function executeStreamGenerate() {
-            const streamBtn = document.getElementById('streamBtn');
-            const streamOutput = document.getElementById('streamOutput');
-            streamBtn.disabled = true;
-            streamBtn.innerText = '⚡ Streaming...';
-            streamOutput.innerText = '⚡ Connecting & retrieving financial context chunks...';
+            resetPipelineTracker();
 
             const roles = document.getElementById('userRoles').value.split(',').map(r => r.trim()).filter(r => r);
             const payload = {
@@ -552,27 +604,115 @@ The company faces intense competition in global technology markets and supply ch
                 });
 
                 if (!response.ok) {
-                    streamOutput.innerText = `Error (${response.status}): Failed to establish stream stream.`;
+                    answerBox.innerText = `Error (${response.status}): Failed to establish SSE stream.`;
                     return;
                 }
 
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder('utf-8');
-                streamOutput.innerText = ''; // Clear status message
+                let buffer = '';
 
                 while (true) {
                     const { done, value } = await reader.read();
                     if (done) break;
-                    const tokenChunk = decoder.decode(value, { stream: true });
-                    streamOutput.innerText += tokenChunk;
-                    streamOutput.scrollTop = streamOutput.scrollHeight;
+
+                    buffer += decoder.decode(value, { stream: true });
+                    const events = buffer.split('\n\n');
+                    buffer = events.pop(); // Keep remaining incomplete block in buffer
+
+                    for (const eventBlock of events) {
+                        if (!eventBlock.trim()) continue;
+                        parseAndRenderSSE(eventBlock, answerBox, sourcesContainer);
+                    }
                 }
             } catch (err) {
-                streamOutput.innerText = `Streaming Network Error: ${err.message}`;
+                answerBox.innerText = `Streaming Network Error: ${err.message}`;
             } finally {
-                streamBtn.disabled = false;
-                streamBtn.innerText = '⚡ Stream LLM Answer (Live)';
+                searchBtn.disabled = false;
+                searchBtn.innerText = '⚡ Execute Query & Stream Analysis';
             }
+        });
+
+        function resetPipelineTracker() {
+            for (let i = 1; i <= 5; i++) {
+                const el = document.getElementById(`step${i}`);
+                el.className = 'step-item';
+                el.querySelector('.step-icon').innerText = '○';
+            }
+        }
+
+        function updateStepStatus(stepNum, labelText) {
+            for (let i = 1; i < stepNum; i++) {
+                const prev = document.getElementById(`step${i}`);
+                if (prev) {
+                    prev.className = 'step-item completed';
+                    prev.querySelector('.step-icon').innerText = '✓';
+                }
+            }
+            const current = document.getElementById(`step${stepNum}`);
+            if (current) {
+                current.className = 'step-item active';
+                current.querySelector('.step-icon').innerText = '➜';
+                if (labelText) {
+                    current.innerText = `➜ Step ${stepNum}: ${labelText}`;
+                }
+            }
+        }
+
+        function parseAndRenderSSE(eventBlock, answerBox, sourcesContainer) {
+            const lines = eventBlock.split('\n');
+            let eventType = 'message';
+            let dataStr = '';
+
+            for (const line of lines) {
+                if (line.startsWith('event:')) {
+                    eventType = line.replace('event:', '').trim();
+                } else if (line.startsWith('data:')) {
+                    dataStr += line.replace('data:', '').trim();
+                }
+            }
+
+            if (eventType === 'status') {
+                try {
+                    const statusObj = JSON.parse(dataStr);
+                    updateStepStatus(statusObj.step, statusObj.message);
+                } catch (e) {}
+            } else if (eventType === 'sources') {
+                try {
+                    const sources = JSON.parse(dataStr);
+                    renderSources(sources, sourcesContainer);
+                } catch (e) {}
+            } else if (eventType === 'token') {
+                // Complete current step 5 status
+                updateStepStatus(5, 'Streaming LLM Financial Analysis...');
+                const step5 = document.getElementById('step5');
+                if (step5) {
+                    step5.className = 'step-item active';
+                    step5.querySelector('.step-icon').innerText = '⚡';
+                }
+                answerBox.innerText += dataStr;
+                answerBox.scrollTop = answerBox.scrollHeight;
+            }
+        }
+
+        function renderSources(sources, container) {
+            if (!sources || sources.length === 0) {
+                container.innerHTML = '<div style="color: var(--text-dim); font-size: 0.8rem;">No matching disclosures retrieved.</div>';
+                return;
+            }
+
+            container.innerHTML = sources.map((item, idx) => `
+                <div class="source-card">
+                    <div class="source-header">
+                        <span>#${idx + 1} | TYPE: ${item.chunk_type.toUpperCase()} | DOC: ${item.doc_id} (${item.ticker_symbol})</span>
+                        <span>RERANK: ${item.rerank_score.toFixed(4)} | RRF: ${item.rrf_score.toFixed(4)}</span>
+                    </div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 6px;">
+                        SECTION: ${item.parent_section} | ROLES: [${item.allowed_roles.join(', ')}]
+                    </div>
+                    <div class="source-content">${escapeHtml(item.content)}</div>
+                </div>
+            `).join('');
         }
 
         function escapeHtml(str) {

@@ -120,13 +120,23 @@ def generate_humanized_answer(query: str, retrieved_chunks: list[dict]) -> str:
     return "\n".join(answer_parts)
 
 
+def format_sse(event_type: str, data_payload: dict | list | str) -> str:
+    """
+    Formats data payload into Server-Sent Event (SSE) format.
+    """
+    if isinstance(data_payload, (dict, list)):
+        data_str = json.dumps(data_payload)
+    else:
+        data_str = str(data_payload)
+    return f"event: {event_type}\ndata: {data_str}\n\n"
+
+
 async def stream_llm_answer(query: str, retrieved_chunks: list[dict]) -> AsyncGenerator[str, None]:
     """
-    Async Generator that streams tokens of the LLM response in real-time.
-    Uses llmprompt.txt context template and streams response via Gemini, OpenAI, or fallback generator.
+    Async Generator that streams tokens of the LLM response formatted as SSE token events.
     """
     if not retrieved_chunks:
-        yield "Based on your permissions and query, no relevant financial documents were found in the database."
+        yield format_sse("token", "Based on your permissions and query, no relevant financial documents were found in the database.")
         return
 
     formatted_context = build_augmented_context(retrieved_chunks)
@@ -144,7 +154,7 @@ async def stream_llm_answer(query: str, retrieved_chunks: list[dict]) -> AsyncGe
             response = model.generate_content(prompt, stream=True)
             for chunk in response:
                 if chunk.text:
-                    yield chunk.text
+                    yield format_sse("token", chunk.text)
                     await asyncio.sleep(0.01)
             return
         except Exception as e:
@@ -162,16 +172,18 @@ async def stream_llm_answer(query: str, retrieved_chunks: list[dict]) -> AsyncGe
             )
             for chunk in stream:
                 if chunk.choices and chunk.choices[0].delta.content:
-                    yield chunk.choices[0].delta.content
+                    yield format_sse("token", chunk.choices[0].delta.content)
                     await asyncio.sleep(0.01)
             return
         except Exception as e:
             logger.warning(f"Streaming OpenAI API call failed, falling back: {e}")
 
-    # Fallback Streamer: Yield structured answer line by line / token by token
+    # Fallback Streamer: Yield structured answer line by line / token by token as SSE token events
     fallback_full_text = generate_humanized_answer(query, retrieved_chunks)
     words = fallback_full_text.split(" ")
     for idx, word in enumerate(words):
-        yield word + (" " if idx < len(words) - 1 else "")
+        token_text = word + (" " if idx < len(words) - 1 else "")
+        yield format_sse("token", token_text)
         await asyncio.sleep(0.02)
+
 

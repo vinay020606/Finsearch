@@ -21,7 +21,7 @@ from app.database import (
 )
 from app.chunker import chunk_financial_document
 from app.hybrid_search import execute_hybrid_rrf_search
-from app.llm_synthesizer import generate_humanized_answer, stream_llm_answer
+from app.llm_synthesizer import generate_humanized_answer, stream_llm_answer, format_sse
 from app.s3_utils import upload_document_to_s3
 from app.models import (
     DocumentUploadRequest,
@@ -428,26 +428,24 @@ def generate_answer(payload: GenerateAnswerRequest):
     )
 
 
-@app.post(
-    "/api/v1/generate-stream",
-    tags=["LLM Answer Synthesis"]
-)
-def generate_answer_stream(payload: GenerateAnswerRequest):
+async def _pipeline_sse_generator(payload: GenerateAnswerRequest):
     """
-    Retrieves relevant financial context chunks via Hybrid RRF + Cross-Encoder Reranking,
-    populates llmprompt.txt context prompt, and streams LLM response tokens in real time.
+    Async generator producing step-by-step SSE status events followed by streamed LLM tokens.
     """
-    logger.info(f"Streaming LLM Answer for query='{payload.query}' (Roles={payload.user_roles})")
+    # Step 1: Query Embedding
+    yield format_sse("status", {"step": 1, "message": "Computing 768-dim query vector (BAAI/bge-base-en-v1.5)..."})
+    await asyncio.sleep(0.1)
 
     try:
         model = get_embedding_model()
         query_vector = model.encode(payload.query, show_progress_bar=False).tolist()
     except Exception as emb_err:
-        logger.error(f"Failed to generate query embedding for streaming: {emb_err}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to compute embedding vector for query."
-        )
+        yield format_sse("error", f"Failed to compute embedding: {emb_err}")
+        return
+
+    # Step 2: Stage 1 & 2 Retrieval
+    yield format_sse("status", {"step": 2, "message": "Executing Stage 1 Hybrid SQL RRF Search (Vector + BM25 tsvector)..."})
+    await asyncio.sleep(0.1)
 
     try:
         with get_db_connection() as conn:
@@ -459,14 +457,56 @@ def generate_answer_stream(payload: GenerateAnswerRequest):
                 top_k=payload.top_k
             )
     except Exception as db_err:
-        logger.error(f"Hybrid RRF Search database execution error for streaming: {db_err}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Database search execution failed: {str(db_err)}"
-        )
+        yield format_sse("error", f"Database search failed: {db_err}")
+        return
 
+    # Step 3: Cross-Encoder Reranking Status
+    yield format_sse("status", {"step": 3, "message": f"Stage 2 Cross-Encoder reranked top {len(raw_results)} relevant disclosures."})
+    await asyncio.sleep(0.1)
+
+    # Step 4: Prompt Context Template
+    yield format_sse("status", {"step": 4, "message": "Populating context prompt template from llmprompt.txt..."})
+    await asyncio.sleep(0.1)
+
+    # Emit retrieved sources to UI
+    sources_data = [
+        {
+            "chunk_id": r["chunk_id"],
+            "doc_id": r["doc_id"],
+            "ticker_symbol": r["ticker_symbol"],
+            "parent_section": r["parent_section"],
+            "chunk_type": r["chunk_type"],
+            "allowed_roles": r["allowed_roles"],
+            "rrf_score": float(r["rrf_score"]),
+            "rerank_score": float(r["rerank_score"]),
+            "content": r["content"]
+        }
+        for r in raw_results
+    ]
+    yield format_sse("sources", sources_data)
+
+    # Step 5: Streaming Synthesis
+    yield format_sse("status", {"step": 5, "message": "Synthesizing financial analysis..."})
+    await asyncio.sleep(0.1)
+
+    # Stream tokens from synthesizer
+    async for sse_chunk in stream_llm_answer(payload.query, raw_results):
+        yield sse_chunk
+
+
+@app.post(
+    "/api/v1/generate-stream",
+    tags=["LLM Answer Synthesis"]
+)
+def generate_answer_stream(payload: GenerateAnswerRequest):
+    """
+    Retrieves financial context, populates llmprompt.txt context prompt,
+    and streams pipeline SSE status events and LLM tokens in real time.
+    """
+    logger.info(f"Streaming LLM Answer with SSE events for query='{payload.query}' (Roles={payload.user_roles})")
     return StreamingResponse(
-        stream_llm_answer(payload.query, raw_results),
+        _pipeline_sse_generator(payload),
         media_type="text/event-stream"
     )
+
 

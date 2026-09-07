@@ -30,6 +30,12 @@ def execute_hybrid_rrf_search(
        Merges rankings using Reciprocal Rank Fusion (RRF k=60) in PostgreSQL SQL.
     2. Stage 2: Cross-Encoder Reranking over candidate results to re-score precise query-chunk relevance.
     """
+    # Strict RBAC Guardrail: Sanitize & validate user roles to prevent unauthorized data access
+    clean_roles = [r.strip().lower() for r in user_roles if r and isinstance(r, str) and r.strip()]
+    if not clean_roles:
+        logger.warning("Search request rejected: Empty or invalid RBAC user_roles provided.")
+        return []
+
     with conn.cursor() as cursor:
         query = """
         WITH vector_search AS (
@@ -68,10 +74,10 @@ def execute_hybrid_rrf_search(
 
         params = [
             str(query_vector),
-            user_roles,
+            clean_roles,
             query_text,
             query_text,
-            user_roles,
+            clean_roles,
             rrf_k,
             rrf_k
         ]

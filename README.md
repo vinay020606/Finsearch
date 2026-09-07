@@ -7,31 +7,42 @@ An enterprise microservices-based financial document search engine featuring a *
 ## ARCHITECTURE OVERVIEW
 
 ```
-[User / Browser]
+[User / Client]
        │
-       │ HTTP Requests (Port 8080)
+       │ Upload File (PDF / MD / TXT)
        ▼
 ┌────────────────────────────────────────────────────────┐
-│ SPRING BOOT API GATEWAY (Port 8080)                    │
-│ • Handles DTO Validation (@Valid, @RestController)      │
-│ • Gateway Service & RestTemplate Routing                │
-│ • Health Monitoring Endpoint                           │
+│ AWS S3 BUCKET (s3://financial-rag-documents)           │
+│ • Raw Financial Document File Storage                  │
 └───────────────────────────┬────────────────────────────┘
-                            │ Forward Request
+                            │ ObjectCreated Event
                             ▼
 ┌────────────────────────────────────────────────────────┐
-│ PYTHON RAG SEARCH SERVICE (Port 8000)                  │
-│ • Table-Aware Chunker (app/chunker.py)                 │
-│ • BAAI/bge-base-en-v1.5 Vector Embeddings (768-dim)    │
-│ • Stage 1 Hybrid SQL RRF Search                        │
-│ • Stage 2 Cross-Encoder Reranking                      │
+│ AWS LAMBDA TRIGGER (aws_lambda/s3_sqs_trigger.py)      │
+│ • Extracts S3 Bucket, Key & Document Metadata          │
+│ • Pushes Event Payload to SQS Queue                    │
 └───────────────────────────┬────────────────────────────┘
-                            │ Query Vector & FTS
+                            │ Send Message
+                            ▼
+┌────────────────────────────────────────────────────────┐
+│ AWS SQS QUEUE (financial-ingestion-queue)              │
+│ • Asynchronous Ingestion Job Buffer                    │
+└───────────────────────────┬────────────────────────────┘
+                            │ Poll Jobs
+                            ▼
+┌────────────────────────────────────────────────────────┐
+│ SQS INGESTOR SERVICE (app/sqs_ingestor.py)             │
+│ • Downloads Updated File from S3                       │
+│ • Table-Aware Financial Chunker (app/chunker.py)       │
+│ • BAAI/bge-base-en-v1.5 Embeddings (768-dim)          │
+│ • PostgreSQL Vector HNSW + BM25 tsvector Re-Indexing   │
+└───────────────────────────┬────────────────────────────┘
+                            │ Upsert Chunks & Vectors
                             ▼
 ┌────────────────────────────────────────────────────────┐
 │ POSTGRESQL + PGVECTOR (Port 5432)                      │
-│ • HNSW Vector Cosine Index                             │
-│ • GIN Full-Text Keyword Search Index                   │
+│ • HNSW Vector Cosine Index (768-dim)                   │
+│ • GIN Full-Text Keyword Search Index (BM25)            │
 │ • RBAC Metadata Array (allowed_roles)                  │
 └────────────────────────────────────────────────────────┘
 ```
@@ -40,13 +51,19 @@ An enterprise microservices-based financial document search engine featuring a *
 
 ## KEY SYSTEM FEATURES
 
-### 1. Spring Boot API Gateway (Java 17)
-- Exposes public REST endpoints on **Port 8080** for document ingestion (`/api/v1/documents/upload`), hybrid search (`/api/v1/search`), and health checks (`/health`).
-- Implements request payload validation (`jakarta.validation`), DTO mapping, and microservice proxy routing to the Python AI service.
+### 1. Event-Driven S3 + Lambda + SQS Re-Indexing
+- Raw documents are stored in **AWS S3** (`s3://financial-rag-documents`).
+- S3 `ObjectCreated` events trigger an **AWS Lambda function** (`aws_lambda/s3_sqs_trigger.py`), which pushes re-indexing payloads to an **AWS SQS Queue**.
+- An **SQS Ingestor Service** (`app/sqs_ingestor.py`) continuously polls SQS, fetches updated documents from S3, re-chunks tables and text, computes 768-dim embeddings, and updates PostgreSQL vector and BM25 search indices atomically.
 
-### 2. 2-Stage Hybrid Search & Reranking Engine
-- **Stage 1 (Hybrid RRF Search):** Combines **Dense Vector Search** (HNSW Cosine index) and **Full-Text Keyword Search** (GIN index) in PostgreSQL, merged natively in SQL via **Reciprocal Rank Fusion (RRF $k=60$)**.
+### 2. Spring Boot API Gateway (Java 17)
+- Exposes public REST endpoints on **Port 8080** for document ingestion (`/api/v1/documents/upload`), hybrid search (`/api/v1/search`), streaming LLM answer synthesis (`/api/v1/generate-stream`), and health checks (`/health`).
+- Implements request payload validation (`jakarta.validation`), DTO mapping, and microservice proxy routing.
+
+### 3. 2-Stage Hybrid Search & Reranking Engine
+- **Stage 1 (Hybrid RRF Search):** Combines **Dense Vector Search** (HNSW Cosine index, 768-dim `BAAI/bge-base-en-v1.5`) and **Full-Text Keyword Search** (GIN index) in PostgreSQL, merged natively in SQL via **Reciprocal Rank Fusion (RRF $k=60$)**.
 - **Stage 2 (Cross-Encoder Reranking):** Uses `cross-encoder/ms-marco-MiniLM-L-6-v2` to re-score candidate chunks for maximum precision.
+
 
 ### 3. Table-Aware Financial Chunker
 - Preserves HTML and Markdown tabular data (`| ... |` and `<table>`) as atomic, unbroken table chunks (`chunk_type="table"`).

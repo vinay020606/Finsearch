@@ -98,8 +98,9 @@ The architecture is divided into two decoupled data pipelines:
 5. **SQS Ingestor Processing**:
    - [`app/sqs_ingestor.py`](file:///c:/Users/jvina/.gemini/antigravity-ide/scratch/financial-rag-backend/app/sqs_ingestor.py) continuously polls SQS, fetches the document from S3, and computes a **SHA-256 content hash**.
    - If the SHA-256 hash matches the database registry, re-indexing is skipped. If updated, document version is incremented (`version = version + 1`).
-6. **Table-Aware Financial Text Chunking**:
-   - [`app/chunker.py`](file:///c:/Users/jvina/.gemini/antigravity-ide/scratch/financial-rag-backend/app/chunker.py) extracts HTML/Markdown tables intact (`chunk_type="table"`) to avoid cutting financial figures across boundaries.
+6. **Table-Aware Financial Text Chunking & Numeric Normalization**:
+   - [`app/chunker.py`](file:///c:/Users/jvina/.gemini/antigravity-ide/scratch/financial-rag-backend/app/chunker.py) normalizes financial accounting parentheses notation e.g. `(12,345)` $\rightarrow$ `(12,345) [-12345]` to ensure BM25 tsvector keyword search and vector search index financial losses accurately.
+   - Extracts HTML/Markdown tables intact (`chunk_type="table"`) and stitches multi-page continuation tables split across page boundaries (`--- Page N ---`).
    - Prose text is segmented under semantic headers (`#`, `##`, `Item 1A`, etc.) while tracking `parent_section` context.
 7. **Dense Vector Embedding Generation**:
    - Chunks are embedded into **768-dimensional dense vectors** using `BAAI/bge-base-en-v1.5`.

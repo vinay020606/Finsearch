@@ -22,6 +22,7 @@ from app.database import (
 from app.chunker import chunk_financial_document
 from app.hybrid_search import execute_hybrid_rrf_search
 from app.llm_synthesizer import generate_humanized_answer, stream_llm_answer
+from app.s3_utils import upload_document_to_s3
 from app.models import (
     DocumentUploadRequest,
     DocumentUploadResponse,
@@ -76,7 +77,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Financial Document Search Engine (RAG Pipeline)",
-    description="FastAPI service with Local File Storage, pgvector, RBAC metadata, Hybrid RRF Search, and LLM Answer Generation.",
+    description="FastAPI service with AWS S3 File Storage, Lambda SQS events, pgvector, RBAC metadata, Hybrid RRF Search, and LLM Answer Generation.",
     version="1.0.0",
     lifespan=lifespan
 )
@@ -129,21 +130,19 @@ def health_check():
 )
 def upload_document(payload: DocumentUploadRequest):
     """
-    Accepts document data, saves raw file to local storage, performs table-aware chunking & embedding, and stores in PostgreSQL.
+    Accepts document data, saves raw file to AWS S3 storage (or local fallback), performs table-aware chunking & embedding, and stores in PostgreSQL.
     """
     try:
         content_hash = compute_sha256(payload.content)
 
-        # 1. Save Raw File to Local Disk Storage
-        storage_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "storage", "documents")
-        os.makedirs(storage_dir, exist_ok=True)
-        local_filename = f"{payload.doc_id}_{payload.filename}"
-        local_file_path = os.path.join(storage_dir, local_filename)
+        # 1. Upload Raw Document to AWS S3 Storage
+        file_storage_path = upload_document_to_s3(
+            doc_id=payload.doc_id,
+            filename=payload.filename,
+            content_bytes=payload.content.encode("utf-8")
+        )
 
-        with open(local_file_path, "w", encoding="utf-8") as f:
-            f.write(payload.content)
-
-        logger.info(f"Saved raw document file to local storage: {local_file_path}")
+        logger.info(f"Saved raw document file to S3/Storage: {file_storage_path}")
 
         with get_db_connection() as conn:
             with conn.cursor() as cursor:
@@ -162,7 +161,7 @@ def upload_document(payload: DocumentUploadRequest):
                         return DocumentUploadResponse(
                             doc_id=payload.doc_id,
                             status="skipped",
-                            file_path=local_file_path,
+                            file_path=file_storage_path,
                             chunks_ingested=0,
                             message="Content hash unchanged. Skipping re-embedding."
                         )
@@ -175,12 +174,12 @@ def upload_document(payload: DocumentUploadRequest):
                 if not chunks:
                     raise HTTPException(status_code=400, detail="No valid text or table chunks found in document.")
 
-                # 4. Vector Embedding Generation
+                # 4. Vector Embedding Generation (BAAI/bge-base-en-v1.5 768-dim)
                 model = get_embedding_model()
                 chunk_texts = [c["content"] for c in chunks]
                 embeddings = model.encode(chunk_texts, show_progress_bar=False).tolist()
 
-                # 5. Upsert Document Registry
+                # 5. Upsert Document Registry with S3 URI
                 cursor.execute(
                     """
                     INSERT INTO document_registry (doc_id, ticker_symbol, filename, file_path, content_hash, version, updated_at)
@@ -193,7 +192,7 @@ def upload_document(payload: DocumentUploadRequest):
                         version = EXCLUDED.version,
                         updated_at = CURRENT_TIMESTAMP;
                     """,
-                    (payload.doc_id, payload.ticker_symbol, payload.filename, local_file_path, content_hash, new_version)
+                    (payload.doc_id, payload.ticker_symbol, payload.filename, file_storage_path, content_hash, new_version)
                 )
 
                 # 6. Delete existing chunks if updating document

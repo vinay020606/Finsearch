@@ -25,25 +25,41 @@ HEADER_PATTERN = re.compile(
     re.IGNORECASE | re.MULTILINE
 )
 
+# Regex to normalize financial parentheses negative numbers: (1,250) -> (1,250) [-1250]
+FINANCIAL_PAREN_REGEX = re.compile(r'\(\s*(\$?\s*\d{1,3}(?:,\d{3})*|\$?\s*\d+)\s*\)')
+
+def normalize_financial_numbers(text: str) -> str:
+    """
+    Normalizes financial accounting parentheses notation e.g. (12,345) or ($1,250)
+    by appending explicit negative numeric representation [-12345] / [-1250] for full-text BM25 search.
+    """
+    if not text:
+        return text
+
+    def _replace_paren(match):
+        raw_val = match.group(1).replace("$", "").replace(",", "").strip()
+        if raw_val.isdigit():
+            return f"{match.group(0)} [-{raw_val}]"
+        return match.group(0)
+
+    return FINANCIAL_PAREN_REGEX.sub(_replace_paren, text)
+
+
 def chunk_financial_document(text: str, max_chunk_size: int = 800) -> list[dict]:
     """
-    Table-aware financial document chunker.
+    Table-aware financial document chunker with multi-page table stitching & numeric normalization.
     
-    1. Extracts HTML/Markdown tables as atomic chunks (chunk_type="table").
-    2. Splits non-table text by semantic section headers (#, ##, Item 1A, etc.).
-    3. Keeps parent section context for each chunk.
-    
-    Returns a list of dicts:
-    [
-        {
-            "parent_section": "Item 1A. Risk Factors",
-            "content": "...",
-            "chunk_type": "text" | "table"
-        }
-    ]
+    1. Normalizes accounting parentheses notation (e.g. (1,250) -> [-1250]).
+    2. Extracts HTML/Markdown tables as atomic chunks (chunk_type="table").
+    3. Stitches multi-page tables split across page demarcations (--- Page N ---).
+    4. Splits non-table text by semantic section headers (#, ##, Item 1A, etc.).
+    5. Keeps parent section context for each chunk.
     """
     if not text or not text.strip():
         return []
+
+    # 1. Normalize financial accounting parentheses notation
+    text = normalize_financial_numbers(text)
 
     chunks = []
     current_section = "General"
@@ -66,16 +82,20 @@ def chunk_financial_document(text: str, max_chunk_size: int = 800) -> list[dict]
     if last_idx < len(text):
         segments.append(("text", text[last_idx:]))
 
-    # Process segments
+    # Process segments with multi-page table continuation stitching
     for seg_type, seg_content in segments:
         if seg_type == "table":
             clean_table = seg_content.strip()
             if clean_table:
-                chunks.append({
-                    "parent_section": current_section,
-                    "content": clean_table,
-                    "chunk_type": "table"
-                })
+                # Check if previous chunk was a table under same section -> stitch multi-page continuation table
+                if chunks and chunks[-1]["chunk_type"] == "table" and chunks[-1]["parent_section"] == current_section:
+                    chunks[-1]["content"] += "\n\n" + clean_table
+                else:
+                    chunks.append({
+                        "parent_section": current_section,
+                        "content": clean_table,
+                        "chunk_type": "table"
+                    })
         else:
             # Process non-table prose block line-by-line / section-by-section
             lines = seg_content.splitlines(keepends=True)

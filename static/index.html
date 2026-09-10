@@ -3,26 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FinSearch // Professional Financial RAG Engine</title>
+    <title>FinSearch // Professional Financial Document Search Engine</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg: #090d16;
-            --surface: #111827;
-            --surface-hover: #1f2937;
-            --border: #1f2937;
-            --border-focus: #4b5563;
-            --text-main: #f3f4f6;
-            --text-muted: #9ca3af;
+            --bg: #ffffff;
+            --surface: #ffffff;
+            --surface-subtle: #f9fafb;
+            --border: #e5e7eb;
+            --border-dark: #111827;
+            --text-main: #000000;
+            --text-muted: #374151;
             --text-dim: #6b7280;
-            --accent: #ffffff;
-            --emerald: #10b981;
-            --blue: #3b82f6;
-            --code-bg: #030712;
-            --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            --font-mono: 'JetBrains Mono', monospace;
+            --accent: #000000;
+            --accent-text: #ffffff;
+            --code-bg: #f3f4f6;
+            --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            --font-mono: 'JetBrains Mono', 'Courier New', monospace;
         }
 
         * {
@@ -35,7 +34,7 @@
             background-color: var(--bg);
             color: var(--text-main);
             font-family: var(--font-sans);
-            padding: 32px 24px;
+            padding: 36px 24px;
             max-width: 1300px;
             margin: 0 auto;
             line-height: 1.5;
@@ -43,7 +42,7 @@
         }
 
         header {
-            border-bottom: 1px solid var(--border);
+            border-bottom: 2px solid var(--text-main);
             padding-bottom: 20px;
             margin-bottom: 32px;
             display: flex;
@@ -54,23 +53,34 @@
         }
 
         .brand-title {
-            font-size: 1.15rem;
+            font-size: 1.25rem;
             font-weight: 700;
             letter-spacing: 0.5px;
-            color: var(--accent);
+            color: var(--text-main);
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
         }
 
         .brand-badge {
             font-family: var(--font-mono);
-            font-size: 0.7rem;
-            background: #1f2937;
-            color: #9ca3af;
+            font-size: 0.72rem;
+            background: #000000;
+            color: #ffffff;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+        }
+
+        .brand-badge-outline {
+            font-family: var(--font-mono);
+            font-size: 0.72rem;
+            background: transparent;
+            color: #000000;
             padding: 2px 8px;
-            border-radius: 4px;
-            border: 1px solid #374151;
+            border-radius: 3px;
+            border: 1px solid #000000;
             font-weight: 500;
         }
 
@@ -79,16 +89,17 @@
             align-items: center;
             gap: 16px;
             font-family: var(--font-mono);
-            font-size: 0.78rem;
-            background: var(--surface);
-            padding: 6px 14px;
-            border: 1px solid var(--border);
-            border-radius: 6px;
+            font-size: 0.8rem;
+            background: var(--surface-subtle);
+            padding: 8px 16px;
+            border: 1px solid var(--border-dark);
+            border-radius: 4px;
+            color: var(--text-main);
         }
 
         .health-status {
-            color: var(--emerald);
-            font-weight: 600;
+            color: var(--text-main);
+            font-weight: 700;
         }
 
         .grid {
@@ -105,8 +116,8 @@
 
         .panel {
             background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 8px;
+            border: 1px solid var(--border-dark);
+            border-radius: 6px;
             padding: 24px;
             display: flex;
             flex-direction: column;
@@ -114,12 +125,12 @@
 
         .panel-header {
             font-size: 0.9rem;
-            font-weight: 600;
+            font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.5px;
             margin-bottom: 20px;
             padding-bottom: 12px;
-            border-bottom: 1px solid var(--border);
+            border-bottom: 1px solid var(--border-dark);
             color: var(--text-main);
             display: flex;
             justify-content: space-between;
@@ -133,10 +144,10 @@
         label {
             display: block;
             font-size: 0.75rem;
-            font-weight: 500;
+            font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            color: var(--text-muted);
+            color: var(--text-main);
             margin-bottom: 6px;
         }
 
@@ -145,18 +156,19 @@
         textarea {
             width: 100%;
             background: var(--bg);
-            border: 1px solid var(--border);
+            border: 1px solid var(--border-dark);
             color: var(--text-main);
             padding: 10px 12px;
             font-family: var(--font-sans);
             font-size: 0.88rem;
-            border-radius: 6px;
+            border-radius: 4px;
             outline: none;
             transition: border-color 0.15s ease;
         }
 
         input:focus, textarea:focus {
-            border-color: var(--border-focus);
+            border-color: #000000;
+            box-shadow: 0 0 0 1px #000000;
         }
 
         textarea {
@@ -164,35 +176,36 @@
             min-height: 120px;
             font-family: var(--font-mono);
             font-size: 0.8rem;
+            color: var(--text-main);
         }
 
         .drop-zone {
-            border: 1px dashed var(--border-focus);
-            border-radius: 6px;
+            border: 1px dashed var(--border-dark);
+            border-radius: 4px;
             padding: 20px;
             text-align: center;
             cursor: pointer;
-            background: var(--bg);
+            background: var(--surface-subtle);
             transition: all 0.2s;
             margin-bottom: 16px;
         }
 
         .drop-zone:hover {
-            border-color: var(--accent);
-            background: #111827;
+            border-color: #000000;
+            background: #f3f4f6;
         }
 
         .btn {
             background: var(--accent);
-            color: #000000;
-            border: none;
+            color: var(--accent-text);
+            border: 1px solid var(--accent);
             padding: 11px 20px;
             font-family: var(--font-sans);
             font-weight: 600;
             font-size: 0.85rem;
-            border-radius: 6px;
+            border-radius: 4px;
             cursor: pointer;
-            transition: opacity 0.15s;
+            transition: background-color 0.15s;
             width: 100%;
             display: inline-flex;
             justify-content: center;
@@ -201,34 +214,26 @@
         }
 
         .btn:hover {
-            opacity: 0.9;
+            background: #222222;
         }
 
         .btn:disabled {
-            background: var(--text-dim);
+            background: #6b7280;
+            border-color: #6b7280;
             cursor: not-allowed;
-            opacity: 0.6;
-        }
-
-        .btn-secondary {
-            background: transparent;
-            color: var(--text-main);
-            border: 1px solid var(--border);
-        }
-
-        .btn-secondary:hover {
-            background: var(--surface-hover);
+            opacity: 0.7;
         }
 
         /* SSE Execution Pipeline Tracker */
         .pipeline-tracker {
-            background: var(--code-bg);
-            border: 1px solid var(--border);
-            border-radius: 6px;
+            background: var(--surface-subtle);
+            border: 1px solid var(--border-dark);
+            border-radius: 4px;
             padding: 16px;
             margin-bottom: 20px;
             font-family: var(--font-mono);
             font-size: 0.8rem;
+            color: var(--text-main);
         }
 
         .step-item {
@@ -241,25 +246,26 @@
         }
 
         .step-item.active {
-            color: #60a5fa;
-            font-weight: 500;
+            color: var(--text-main);
+            font-weight: 700;
         }
 
         .step-item.completed {
-            color: var(--emerald);
+            color: var(--text-main);
         }
 
         .step-icon {
             width: 16px;
             text-align: center;
             display: inline-block;
+            font-weight: 700;
         }
 
         /* Answer Output Area */
         .answer-box {
-            background: var(--code-bg);
-            border: 1px solid var(--border);
-            border-radius: 6px;
+            background: var(--surface-subtle);
+            border: 1px solid var(--border-dark);
+            border-radius: 4px;
             padding: 20px;
             font-size: 0.92rem;
             line-height: 1.6;
@@ -267,7 +273,7 @@
             min-height: 180px;
             max-height: 380px;
             overflow-y: auto;
-            color: #e5e7eb;
+            color: var(--text-main);
             margin-bottom: 20px;
         }
 
@@ -280,11 +286,12 @@
         /* Source Disclosures Card */
         .source-card {
             background: var(--bg);
-            border: 1px solid var(--border);
-            border-radius: 6px;
+            border: 1px solid var(--border-dark);
+            border-radius: 4px;
             padding: 12px 14px;
             margin-bottom: 10px;
             font-size: 0.82rem;
+            color: var(--text-main);
         }
 
         .source-header {
@@ -292,22 +299,24 @@
             justify-content: space-between;
             font-family: var(--font-mono);
             font-size: 0.75rem;
-            color: var(--text-muted);
+            color: var(--text-main);
+            font-weight: 600;
             margin-bottom: 6px;
-            border-bottom: 1px dashed var(--border);
+            border-bottom: 1px solid var(--border);
             padding-bottom: 4px;
         }
 
         .source-content {
             font-family: var(--font-mono);
             font-size: 0.78rem;
-            color: var(--text-muted);
+            color: var(--text-main);
             background: var(--code-bg);
             padding: 8px;
             border-radius: 4px;
             white-space: pre-wrap;
             overflow-x: auto;
             max-height: 120px;
+            border: 1px solid var(--border);
         }
 
         .row-flex {
@@ -321,10 +330,11 @@
 
         .status-msg {
             font-family: var(--font-mono);
-            font-size: 0.78rem;
-            color: var(--text-muted);
+            font-size: 0.8rem;
+            color: var(--text-main);
             margin-top: 10px;
             word-break: break-all;
+            font-weight: 500;
         }
     </style>
 </head>
@@ -346,14 +356,14 @@
         <div class="panel">
             <div class="panel-header">
                 <span>Document Ingestion</span>
-                <span class="brand-badge">S3 & Vector Pipeline</span>
+                <span class="brand-badge-outline">S3 & Vector Pipeline</span>
             </div>
 
             <form id="uploadForm">
                 <div class="drop-zone" id="dropZone">
                     <input type="file" id="fileInput" style="display: none;" accept=".pdf,.txt,.md,.json,.csv">
-                    <div id="dropZoneText" style="font-size: 0.85rem; color: var(--text-muted);">
-                        📁 Drag & Drop Document (PDF, MD, TXT)<br>
+                    <div id="dropZoneText" style="font-size: 0.85rem; color: var(--text-main);">
+                        Drag & Drop Document (PDF, MD, TXT)<br>
                         <span style="font-size: 0.75rem; color: var(--text-dim);">or click to select file</span>
                     </div>
                 </div>
@@ -404,7 +414,7 @@ Global supply chain disruptions and competition represent key operational risk f
         <div class="panel">
             <div class="panel-header">
                 <span>Financial Analysis & LLM Synthesis</span>
-                <span class="brand-badge" style="color: var(--emerald); border-color: var(--emerald);">SSE Stream Engine</span>
+                <span class="brand-badge-outline">SSE Stream Engine</span>
             </div>
 
             <form id="searchForm">
@@ -424,7 +434,7 @@ Global supply chain disruptions and competition represent key operational risk f
                     </div>
                 </div>
 
-                <button type="submit" id="searchBtn" class="btn">⚡ Execute Query & Stream Analysis</button>
+                <button type="submit" id="searchBtn" class="btn">Execute Query & Stream Analysis</button>
             </form>
 
             <!-- REAL-TIME SSE PIPELINE EXECUTION TRACKER -->
@@ -467,17 +477,17 @@ Global supply chain disruptions and competition represent key operational risk f
 
         dropZone.addEventListener('dragover', (e) => {
             e.preventDefault();
-            dropZone.style.borderColor = 'var(--accent)';
+            dropZone.style.borderColor = '#000000';
         });
 
         dropZone.addEventListener('dragleave', (e) => {
             e.preventDefault();
-            dropZone.style.borderColor = 'var(--border-focus)';
+            dropZone.style.borderColor = 'var(--border-dark)';
         });
 
         dropZone.addEventListener('drop', (e) => {
             e.preventDefault();
-            dropZone.style.borderColor = 'var(--border-focus)';
+            dropZone.style.borderColor = 'var(--border-dark)';
             if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
                 handleFileSelection(e.dataTransfer.files[0]);
             }
@@ -496,7 +506,7 @@ Global supply chain disruptions and competition represent key operational risk f
             const ticker = document.getElementById('ticker').value.trim() || 'DOC';
             document.getElementById('docId').value = `DOC-${ticker}-${nameWithoutExt}`;
 
-            dropZoneText.innerHTML = `✅ Selected File: <strong>${file.name}</strong> (${(file.size / 1024).toFixed(1)} KB)`;
+            dropZoneText.innerHTML = `Selected File: <strong>${file.name}</strong> (${(file.size / 1024).toFixed(1)} KB)`;
 
             if (file.name.toLowerCase().endsWith('.pdf')) {
                 document.getElementById('docContent').value = `[PDF Document Attached: ${file.name}]\nText stream will be automatically extracted during ingestion.`;
@@ -561,13 +571,13 @@ Global supply chain disruptions and competition represent key operational risk f
                 }
 
                 if (res.ok) {
-                    statusOutput.innerText = `✓ Successfully Ingested! Doc ID: ${data.doc_id} | Chunks: ${data.chunks_ingested} | Storage: ${data.file_path}`;
+                    statusOutput.innerText = `[SUCCESS] Ingested Doc ID: ${data.doc_id} | Chunks: ${data.chunks_ingested} | Storage: ${data.file_path}`;
                     checkHealth();
                 } else {
-                    statusOutput.innerText = `❌ Error (${res.status}): ${JSON.stringify(data)}`;
+                    statusOutput.innerText = `[ERROR ${res.status}] ${JSON.stringify(data)}`;
                 }
             } catch (err) {
-                statusOutput.innerText = `❌ Network Error: ${err.message}`;
+                statusOutput.innerText = `[NETWORK ERROR] ${err.message}`;
             } finally {
                 uploadBtn.disabled = false;
                 uploadBtn.innerText = 'Upload & Index Document';
@@ -583,7 +593,7 @@ Global supply chain disruptions and competition represent key operational risk f
             const sourcesContainer = document.getElementById('sourcesContainer');
 
             searchBtn.disabled = true;
-            searchBtn.innerText = '⚡ Processing Pipeline...';
+            searchBtn.innerText = 'Processing Pipeline...';
             answerBox.innerText = '';
             sourcesContainer.innerHTML = '<div style="color: var(--text-dim); font-size: 0.8rem;">Retrieving disclosures...</div>';
 
@@ -629,7 +639,7 @@ Global supply chain disruptions and competition represent key operational risk f
                 answerBox.innerText = `Streaming Network Error: ${err.message}`;
             } finally {
                 searchBtn.disabled = false;
-                searchBtn.innerText = '⚡ Execute Query & Stream Analysis';
+                searchBtn.innerText = 'Execute Query & Stream Analysis';
             }
         });
 
@@ -652,9 +662,9 @@ Global supply chain disruptions and competition represent key operational risk f
             const current = document.getElementById(`step${stepNum}`);
             if (current) {
                 current.className = 'step-item active';
-                current.querySelector('.step-icon').innerText = '➜';
+                current.querySelector('.step-icon').innerText = '►';
                 if (labelText) {
-                    current.innerText = `➜ Step ${stepNum}: ${labelText}`;
+                    current.innerText = `► Step ${stepNum}: ${labelText}`;
                 }
             }
         }
@@ -688,7 +698,7 @@ Global supply chain disruptions and competition represent key operational risk f
                 const step5 = document.getElementById('step5');
                 if (step5) {
                     step5.className = 'step-item active';
-                    step5.querySelector('.step-icon').innerText = '⚡';
+                    step5.querySelector('.step-icon').innerText = '►';
                 }
                 answerBox.innerText += dataStr;
                 answerBox.scrollTop = answerBox.scrollHeight;

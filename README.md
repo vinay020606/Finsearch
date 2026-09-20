@@ -1,6 +1,23 @@
 # FinSearch: Production-Grade Financial Document Search & Indexing Engine
 
-An enterprise microservices-based financial document search, indexing, and synthesis engine featuring a **Spring Boot API Gateway (Java 17)**, **Python AI RAG Engine (FastAPI)**, **PostgreSQL (`pgvector` + GIN)**, **AWS S3 Document Storage**, **AWS Lambda + SQS Event-Driven Re-Indexing Pipeline**, **Table-Aware Financial Text Chunking**, **`BAAI/bge-base-en-v1.5` Vector Embeddings (768-dim)**, **Stage 1 Hybrid SQL RRF Search**, **Stage 2 Cross-Encoder Reranking**, **`llmprompt.txt` System Prompt Engine**, and **Server-Sent Events (SSE) Live Token Streaming UI**.
+An enterprise microservices-based financial document search, indexing, and synthesis engine featuring a **Spring Boot API Gateway (Java 17)**, **Python AI RAG Engine (FastAPI)**, **PostgreSQL (`pgvector` + GIN)**, **AWS S3 Document Storage**, **AWS Lambda + SQS Event-Driven Re-Indexing Pipeline**, **Redis Semantic Vector Query Caching**, **HyDE (Hypothetical Document Embeddings)**, **Automatic Query Metadata Filter Parsing**, **Table-Aware Financial Text Chunking**, **`BAAI/bge-base-en-v1.5` Vector Embeddings (768-dim)**, **Stage 1 Hybrid SQL RRF Search**, **Stage 2 Cross-Encoder Reranking**, **`llmprompt.txt` System Prompt Engine**, and **Server-Sent Events (SSE) Live Token Streaming UI**.
+
+---
+
+## ⚡ ADVANCED PRODUCTION-GRADE FEATURES
+
+### 1. 🚀 Redis Semantic Vector Query Caching (`app/database.py`)
+- **Zero-Latency Retrieval**: Evaluates cosine similarity between incoming query embeddings and cached query vectors in Redis (`semantic_cache:*` namespace).
+- **Sub-10ms Hits**: If cosine similarity $\ge 0.92$, returns instant semantically matched search results from cache without re-executing PostgreSQL vector searches or LLM re-ranking.
+- **Resilient Fallback**: Automatically defaults to an in-memory vector cache if Redis server connection is unmaintained.
+
+### 2. 🧠 HyDE (Hypothetical Document Embeddings) & Query Expansion (`app/hybrid_search.py`)
+- **Domain Hypothetical Synthesis**: Generates a hypothetical financial disclosure chunk (`generate_hyde_document`) matching user query intents.
+- **Enhanced Vector Recall**: Blends raw query vectors ($0.5$) with hypothetical document embeddings ($0.5$), significantly boosting retrieval precision by aligning vector spaces between user queries and financial 10-K disclosure blocks.
+
+### 3. 🔍 Automatic Natural Language Query Metadata Parsing (`app/hybrid_search.py`)
+- **Regex & Domain Entity Extraction**: Parses raw query strings to automatically detect ticker symbols (`AAPL`, `MSFT`, `TSLA`, etc.), fiscal years (`2024`, `2023`), and filing section keywords (`Item 1A`, `Item 7`, `Balance Sheet`).
+- **Dynamic PostgreSQL SQL Filters**: Injects extracted metadata filters directly into PostgreSQL `vector_search` and `fts_search` CTE `WHERE` clauses (`AND ticker_symbol = %s`), providing hard dynamic SQL isolation alongside RBAC role validation.
 
 ---
 

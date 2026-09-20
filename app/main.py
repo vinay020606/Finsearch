@@ -17,7 +17,9 @@ from app.database import (
     init_db_pool,
     close_db_pool,
     init_db,
-    get_db_connection
+    get_db_connection,
+    get_semantic_cache,
+    set_semantic_cache
 )
 from app.chunker import chunk_financial_document
 from app.hybrid_search import execute_hybrid_rrf_search
@@ -348,6 +350,17 @@ def search_documents(payload: SearchRequest):
             detail="Failed to compute embedding vector for query."
         )
 
+    # 1. Semantic Vector Query Cache Check (Zero Latency)
+    cached_payload = get_semantic_cache(query_vector, threshold=0.92)
+    if cached_payload and isinstance(cached_payload, dict) and "results" in cached_payload:
+        logger.info(f"[CACHE HIT] Returning zero-latency response for query='{payload.query}'")
+        cached_items = [SearchResultItem(**item) for item in cached_payload["results"]]
+        return SearchResponse(
+            query=payload.query,
+            total_results=len(cached_items),
+            results=cached_items
+        )
+
     try:
         with get_db_connection() as conn:
             raw_results = execute_hybrid_rrf_search(
@@ -378,6 +391,12 @@ def search_documents(payload: SearchRequest):
         )
         for r in raw_results
     ]
+
+    # Store in Semantic Vector Cache
+    cache_payload = {
+        "results": [item.dict() for item in results_items]
+    }
+    set_semantic_cache(payload.query, query_vector, cache_payload)
 
     return SearchResponse(
         query=payload.query,
